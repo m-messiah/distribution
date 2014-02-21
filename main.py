@@ -8,6 +8,7 @@ from flask_ldap import LDAP, login_required
 from markupsafe import Markup
 from os import urandom
 import distributor
+import syncer
 
 
 logging.basicConfig(filename='/var/log/distribution.log',
@@ -34,7 +35,6 @@ def index():
             continue
         panes.append({"href": cat, "name": cat.title(),
                       "content": Markup(generator(cat))})
-    flash('You were successfully logged in')
     #logging.info('User {} loaded root'.format(current_user.email))
     return render_template("index.html", panes=panes,
                            webpane=Markup(generator("web")),
@@ -44,12 +44,10 @@ def index():
 @app.route('{}/refresh'.format(app.PREFIX))
 @login_required
 def refresh():
-    import syncer
-
+    reload(syncer)
     syncer.main()
     reload(distributor)
     app.distributor = distributor.Distributor()
-    flash('Successfully reloaded')
     return redirect('{}/'.format(app.PREFIX))
 
 

@@ -11,24 +11,33 @@ def main():
                ]
     auth = {'PRIVATE-TOKEN': ''}
     url = "https://git.example.com/api/v3/projects"
-    r = requests.get(url, headers=auth)
-    projects = r.json()
-    for project in projects:
-        if project[u'name'] in servers:
-            server = project[u'name']
-            id_proj = project[u'id']
-            r = requests.get("{0}/{1}/repository/commits"
-                             .format(url, id_proj), headers=auth)
-            sha = r.json()[0][u'id']
-            for filepath in ['nginx/nginx.conf', 'haproxy/haproxy.cfg']:
-                params = {'filepath': filepath}
-                r = requests.get("{0}/{1}/repository/blobs/{2}"
+    for server in servers:
+        # server_configs - is Group - owner of configs.
+        id_proj = requests.get("{0}/server_configs%2F{1}".format(url, server),
+                               headers=auth).json()[u'id']
+        sha = requests.get("{0}/{1}/repository/commits"
+                           .format(url, id_proj),
+                            headers=auth).json()[0][u'id']
+        for filepath in ['nginx/nginx.conf', 'haproxy/haproxy.cfg']:
+            params = {'filepath': filepath}
+            mainf = requests.get("{0}/{1}/repository/blobs/{2}"
                                  .format(url, id_proj, sha),
-                                 params=params, headers=auth)
-                with open("./configs/{0}.{1}.all"
-                          .format(filepath[:filepath.find("/")], server),
-                          "w") as config:
-                    config.write(r.text)
+                                 params=params, headers=auth).text
+            with open("./configs/{0}.{1}.all"
+                      .format(filepath[:filepath.find("/")], server),
+                      "w") as config:
+                config.write(mainf)
+                for incl in re.findall(r"(?:^i|^ +i)nclude (.+);$",
+                                       mainf, re.M):
+                    params = {
+                        'filepath': "{0}/{1}".format(
+                            filepath[:filepath.find("/")], incl)
+                    }
+                    incf = requests.get("{0}/{1}/repository/blobs/{2}"
+                                        .format(url, id_proj, sha),
+                                                params=params,
+                                                headers=auth).text
+                    config.write(incf)
 
     #for server in servers:
         #call(["scp", "{0}.example.com:/etc/nginx/nginx.conf".format(server),

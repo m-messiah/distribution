@@ -11,7 +11,7 @@ class Distributor(object):
         self.changed = []
         self.re_nginx_server = re.compile(
             r'[^#]? *?server\s*?{\s*?'
-            '(.*?listen\s+(?:[\d\.:]+)(?:\s*ssl)? *?;.*?)'
+            '(.*?listen\s+(?:[\d\.:]+)(?:\s*ssl)?(?:\s*default)? *?;.*?)'
             '(?:server_name|ke_upstream)\s+([^ ][A-Za-z0-9\-_\.: ]+?);',
             re.DOTALL | re.MULTILINE)
         self.re_nginx_ip = re.compile(r'\n[^#]*?listen\s+?'
