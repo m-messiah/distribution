@@ -1,6 +1,12 @@
 {% extends "base.html" %}
 {% block title %}Distribution{% endblock %}
 {% block body %}
+<!--[if IE]>
+    <h1>Unsupported shit browser! Please use Chrome, Firefox or Safari</h1>
+<![endif]-->
+<!--[if !IE]><!-->
+<br>
+<br>
       <ul class="tabs">
           <li>
               <input type="radio" checked name="tabs" id="tab-web">
@@ -26,4 +32,5 @@
               </div>
           </li>
       </ul>
+<!--<![endif]-->
 {% endblock %}

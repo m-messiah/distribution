@@ -9,6 +9,7 @@ class Distributor(object):
     def __init__(self):
         self.services = {'web': dict(), 'other': dict()}
         self.changed = []
+        self.last_sync = 0
         self.re_nginx_server = re.compile(
             r'[^#]? *?server\s*?{\s*?'
             '(.*?listen\s+(?:[\d\.:]+)(?:\s*ssl)?(?:\s*default)? *?;.*?)'
@@ -29,41 +30,65 @@ class Distributor(object):
                 self.parse_nginx(conf)
             elif conf[10:17] == "haproxy":
                 self.parse_haproxy(conf)
+            elif conf[10:] == "last_sync.date":
+                self.last_sync = open(conf, "r").read()
             else:
                 print "Parser for {0} is not implemented".format(conf)
+
+    def parse_dns(self, conf):
+        servers = [i.split(" ", 1) for i in open(conf).readlines()]
+        cat = "DNS: " + conf[14:]
+        self.services[cat] = dict()
+        for server in servers:
+            if server[0] == "default._domainkey":
+                continue
+            priority, class_path, list_type, destination = server[1].split(
+                " ", 3
+            )
+            self.services[cat][server[0]] = {
+                "   Priority": [priority], "  Class": [class_path],
+                " Type": [list_type], "Dest": [destination.rstrip()]
+            }
 
     def parse_nginx(self, conf):
         servers = [(i[1].strip(), i[0])
                    for i in self.re_nginx_server.findall(open(conf).read())]
         server_name = conf[16:-4]
+        if re.match("f\dn\d", server_name):
+            server_name = server_name[:2]
+        if "orbit" in server_name:
+            server_name = "orbit"
         for server in servers:
             listeners = self.re_nginx_ip.findall(server[1])
             ports = filter(
                 lambda p: (p != '80') and (p != '443') and len(p),
                 map(lambda l: l.split(':')[1] if len(l.split(':')) > 1 else '',
                     listeners))
-            urls = " ".join(
-                sorted(map(
-                    lambda l: l + ':' + ",".join(ports) if len(ports) else l,
-                    map(lambda s: s[1:] if s[0] == '.' else s,
-                        server[0].split()))))
-            print urls
-            if urls in self.services['web'].keys():
-                if server_name in self.services['web'][urls].keys():
-                    self.services['web'][urls][server_name].extend(listeners)
+            urls = map(
+                lambda l: l + ':' + ",".join(ports) if len(ports) else l,
+                map(lambda s: s[1:] if s[0] == '.' else s,
+                    server[0].split()))
+
+            def stdports(ipaddr):
+                return re.sub(r"\:(80|443)$", "", ipaddr)
+            listeners = list(set(map(stdports, listeners)))
+            for url in urls:
+                if url in self.services['web'].keys():
+                    if server_name in self.services['web'][url].keys():
+                        self.services['web'][url][server_name].extend(
+                            listeners)
+                    else:
+                        self.services['web'][url][server_name] = listeners
                 else:
-                    self.services['web'][urls][server_name] = listeners
-            else:
-                self.services['web'][urls] = dict()
-                self.services['web'][urls][server_name] = listeners
+                    self.services['web'][url] = dict()
+                    self.services['web'][url][server_name] = listeners
 
     def parse_haproxy(self, conf):
         listeners = [(i[0].replace("cluster.", ""), i[1])
                      for i in self.re_haproxy.findall(open(conf).read())]
 
         server_name = conf[18:-4]
-        if re.match("f\dn\d", server_name):
-            server_name = server_name[:2]
+
         for listener in listeners:
             if listener[0] == "stat":
                 continue
@@ -130,10 +155,7 @@ class Distributor(object):
         servers = []
         for service in self.services[cat].keys():
             for server_name in self.services[cat][service].keys():
-                if re.match("f\dn\d", server_name):
-                    servers.append(server_name[:2])
-                else:
-                    servers.append(server_name)
+                servers.append(server_name)
         servers = list(sorted(set(servers)))
         for server in servers:
             response.append(u"<th>{0}</th>".format(server))
@@ -149,7 +171,7 @@ class Distributor(object):
                     sorted([(i[1], i[0])
                             for i in services1 if i[0] < 2]))
         for (service, color) in services:
-            if color > 1:
+            if color > 1 and not "DNS" in cat:
                 response.append(u"<tr class=\"error\"><th>")
                 try:
                     a = check_output(["host", service.split()[0].lstrip(".")])

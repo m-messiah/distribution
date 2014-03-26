@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 LDAP_HOST = ""
 LDAP_DOMAIN = ""
 LDAP_PROFILE_KEY = "sAMAccountName"

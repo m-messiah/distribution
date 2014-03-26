@@ -38,14 +38,15 @@ def index():
     #logging.info('User {} loaded root'.format(current_user.email))
     return render_template("index.html", panes=panes,
                            webpane=Markup(generator("web")),
-                           otherpane=Markup(generator("other")))
+                           otherpane=Markup(generator("other")),
+                           last_sync=app.distributor.last_sync)
 
 
 @app.route('{}/refresh'.format(app.PREFIX))
 @login_required
 def refresh():
-    reload(syncer)
-    syncer.main()
+    #reload(syncer)
+    #syncer.main()
     reload(distributor)
     app.distributor = distributor.Distributor()
     return redirect('{}/'.format(app.PREFIX))

@@ -9,7 +9,7 @@
 <body>
 <div class="buttons">
   {% if "username" in session %}
-    <a class="error" href="{{ url_for('refresh') }}">Force Reload</a>
+    <a class="error" href="{{ url_for('refresh') }}">Force Reload (last sync: {{ last_sync }})</a>
     <a href="{{ url_for('logout') }}">{{ session["username"] }}: Log out</a>
   {% else %}
     <a class="success" href="{{ url_for('login') }}">Log in</a>
