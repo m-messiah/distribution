@@ -25,8 +25,10 @@ class Distributor(object):
         self.beautify()
 
     def generate(self):
-        for conf in glob('./configs/*.all'):
-            if conf[10:15] == "nginx":
+        for conf in glob('./configs/*'):
+            if conf[10:13] == "dns":
+                self.parse_dns(conf)
+            elif conf[10:15] == "nginx":
                 self.parse_nginx(conf)
             elif conf[10:17] == "haproxy":
                 self.parse_haproxy(conf)
@@ -42,22 +44,20 @@ class Distributor(object):
         for server in servers:
             if server[0] == "default._domainkey":
                 continue
-            priority, class_path, list_type, destination = server[1].split(
-                " ", 3
-            )
+            (priority, class_path,
+             list_type, destination) = server[1].split(" ", 3)
+
             self.services[cat][server[0]] = {
-                "   Priority": [priority], "  Class": [class_path],
-                " Type": [list_type], "Dest": [destination.rstrip()]
+                "   Priority": [priority],          # For sorting labels
+                "  Class": [class_path],
+                " Type": [list_type],
+                "Dest": [destination.rstrip()]
             }
 
     def parse_nginx(self, conf):
         servers = [(i[1].strip(), i[0])
                    for i in self.re_nginx_server.findall(open(conf).read())]
         server_name = conf[16:-4]
-        if re.match("f\dn\d", server_name):
-            server_name = server_name[:2]
-        if "orbit" in server_name:
-            server_name = "orbit"
         for server in servers:
             listeners = self.re_nginx_ip.findall(server[1])
             ports = filter(
@@ -66,17 +66,17 @@ class Distributor(object):
                     listeners))
             urls = map(
                 lambda l: l + ':' + ",".join(ports) if len(ports) else l,
-                map(lambda s: s[1:] if s[0] == '.' else s,
-                    server[0].split()))
+                map(lambda s: s[1:] if s[0] == '.' else s, server[0].split()))
 
             def stdports(ipaddr):
                 return re.sub(r"\:(80|443)$", "", ipaddr)
-            listeners = list(set(map(stdports, listeners)))
+            listeners = set(map(stdports, listeners))
+
             for url in urls:
+                url = url.lower().decode("idna")
                 if url in self.services['web'].keys():
                     if server_name in self.services['web'][url].keys():
-                        self.services['web'][url][server_name].extend(
-                            listeners)
+                        self.services['web'][url][server_name] |= listeners
                     else:
                         self.services['web'][url][server_name] = listeners
                 else:
@@ -88,7 +88,6 @@ class Distributor(object):
                      for i in self.re_haproxy.findall(open(conf).read())]
 
         server_name = conf[18:-4]
-
         for listener in listeners:
             if listener[0] == "stat":
                 continue
@@ -129,15 +128,14 @@ class Distributor(object):
                 self.services[cat] = dict()
             if listener[0] in self.services[cat]:
                 if server_name in self.services[cat][listener[0]].keys():
-                    self.services[cat][listener[0]][server_name].append(
+                    self.services[cat][listener[0]][server_name].add(
                         listener[1])
                 else:
-                    self.services[cat][listener[0]][server_name] = [
-                        listener[1], ]
+                    self.services[cat][listener[0]][server_name] = {
+                        listener[1]}
             else:
-                self.services[cat][listener[0]] = {server_name:
-                                                   [listener[1], ]
-                                                   }
+                self.services[cat][listener[0]] = {
+                    server_name: {listener[1]}}
 
     def beautify(self):
         for cat in self.services:
@@ -147,7 +145,7 @@ class Distributor(object):
                         del self.services[cat][service][server_name]
                     else:
                         self.services[cat][service][server_name] = sorted(
-                            list(set(self.services[cat][service][server_name]))
+                            self.services[cat][service][server_name]
                         )
 
     def write(self, cat):
@@ -175,8 +173,7 @@ class Distributor(object):
                 response.append(u"<tr class=\"error\"><th>")
                 try:
                     a = check_output(["host", service.split()[0].lstrip(".")])
-                    ip_address = re.search(r"((?:\d{1,3}\.){3}\d{1,3})",
-                                           a).group(0)
+                    ip_address = a[a.find("address") + 8:].split()[0]
                 except AttributeError:
                     ip_address = "256"
                 except CalledProcessError:
@@ -185,22 +182,20 @@ class Distributor(object):
                 response.append(u"<tr><th>")
                 ip_address = "256"
 
-            response.append(
-                u"</br>".join(map(lambda s: s.lower().decode("idna"),
-                                  service.split() + [""])))
+            response.append(service)
             response.append(u"</th>")
             for server in servers:
-                if server in self.services[cat][service].keys():
-                    response.append(u"<td>")
-                    for ip in sorted(
-                            list(set(self.services[cat][service][server]))):
-                        if ip.count(ip_address) > 0:
-                            response.append(u"<b>{}</b></br>".format(ip))
-                        else:
-                            response.append(u"{}</br>".format(ip))
-                    response.append(u"</td>")
-                else:
+                if server not in self.services[cat][service].keys():
                     response.append(u"<td> </td>")
+                    continue
+
+                response.append(u"<td>")
+                for ip in self.services[cat][service][server]:
+                    if ip.count(ip_address) > 0:
+                        response.append(u"<b>{}</b></br>".format(ip))
+                    else:
+                        response.append(u"{}</br>".format(ip))
+                response.append(u"</td>")
             response.append(u"</tr>\n")
 
         response.append(u"</tbody></table>")
