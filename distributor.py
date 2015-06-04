@@ -6,7 +6,6 @@ import datetime
 import dns.name
 import dns.message
 import dns.query
-import json
 from os.path import basename
 import re
 import errno
@@ -24,7 +23,7 @@ class Distributor(object):
         self.re_nginx_server = re.compile(
             '^\s*?server[^#\{\}]*\{[^\}]*?'
             '^\s*?listen\s+([\d\.:]+(?:\s*ssl)?)(?:\s*default)? *?;[^\}]*?'
-            '^\s+?(?:server_name|ke_upstream)\s+([^ ][A-Za-z0-9\-_\.: ]+?;(?: # author: (.+?)\n)?)',
+            '^\s+?server_name\s+([^ ][A-Za-z0-9\-_\.: ]+?;(?: # author: (.+?)\n)?)',
             re.DOTALL | re.MULTILINE)
         self.re_nginx_ip = re.compile(
             r'((?:\d{1,3}\.){3}\d{1,3}:?\d*(?:\s*ssl)?)')
@@ -84,9 +83,9 @@ class Distributor(object):
                 lambda l: l + ':' + ",".join(ports) if len(ports) else l,
                 map(lambda s: s[1:] if s[0] == '.' else s, server[0].split()))
 
-            def stdports(ipaddr):
-                return re.sub(r"\:(80|443 ssl)$", "", ipaddr).replace(" ssl", "")
-            listeners = set(map(stdports, listeners))
+            listeners = set(map(
+                lambda l: re.sub(r":(80|443 ssl)$", "", l).replace(" ssl", ""),
+                listeners))
 
             for url in urls:
                 url = url.lower().decode("idna")
@@ -107,7 +106,8 @@ class Distributor(object):
         listeners = [(i[0].replace("cluster.", ""), i[1])
                      for i in self.re_haproxy.findall(open(conf).read())]
 
-        server_name = basename(conf).replace("haproxy.", "").replace(".all", "")
+        server_name = basename(
+            conf).replace("haproxy.", "").replace(".all", "")
 
         for listener in listeners:
             if listener[0] == "stat":
@@ -116,30 +116,26 @@ class Distributor(object):
             fl = True
             for pattern in [":8080", ":443", ":80"]:
                 if pattern in listener[1]:
-                    cat = "http"
-                    fl = False
+                    cat, fl = "http", False
                     break
 
             if fl:
                 for pattern in [":1433"]:
                     if pattern in listener[1]:
-                        cat = "sql"
-                        fl = False
+                        cat, fl = "sql", False
                         break
 
             if fl:
                 for pattern in [":25", ":143", ":110"]:
                     if pattern in listener[1]:
-                        cat = "mail"
-                        fl = False
+                        cat, fl = "mail", False
                         break
 
             if fl:
                 for pattern in ["ssh", "sql", "rdp", "mail",
                                 "http", "ldap", "sms"]:
                     if pattern in listener[0]:
-                        cat = pattern
-                        fl = False
+                        cat, fl = pattern, False
                         break
 
             if fl:
@@ -150,13 +146,14 @@ class Distributor(object):
             if listener[0] in self.services[cat]:
                 if server_name in self.services[cat][listener[0]].keys():
                     self.services[cat][listener[0]][server_name].add(
-                        listener[1])
+                        listener[1]
+                    )
                 else:
-                    self.services[cat][listener[0]][server_name] = set([
-                        listener[1]])
+                    self.services[cat][listener[0]][server_name] = {
+                        listener[1]
+                    }
             else:
-                self.services[cat][listener[0]] = {
-                    server_name: set([listener[1]])}
+                self.services[cat][listener[0]] = {server_name: {listener[1]}}
 
     def beautify(self):
         for cat in self.services:
@@ -217,21 +214,26 @@ class Distributor(object):
                         url = "http://" + clear_service
                     r = requests.get("%s/favicon.ico" % url, timeout=2)
                     if r.status_code != 200:
-                        response.append(" <i class=\"mdi-action-favorite-outline\"></i>")
+                        response.append(
+                            " <i class=\"mdi-action-favorite-outline\"></i>")
                     history += len(r.history)
                     r = requests.get("%s/robots.txt" % url, timeout=2)
                     if r.status_code != 200:
                         response.append(" <i class=\"mdi-action-android\"></i>")
                     elif "text/plain" not in r.headers['content-type']:
-                        response.append(" <i class=\"mdi-action-android orange-text\"></i>")
+                        response.append(
+                            " <i class=\"mdi-action-android orange-text\"></i>")
                     history += len(r.history)
                     if len(r.history):
-                        response.append(" <i class=\"mdi-navigation-arrow-forward\"></i>")
+                        response.append(
+                            " <i class=\"mdi-navigation-arrow-forward\"></i>")
                     r = requests.head(url, timeout=2)
                     if r.headers.get('x-powered-by'):
-                        response.append(" <i class=\"mdi-action-announcement\"></i>")
+                        response.append(
+                            " <i class=\"mdi-action-announcement\"></i>")
                 except Exception as e:
-                    response.append(" <i class=\"mdi-content-clear red-text\"></i>")
+                    response.append(
+                        " <i class=\"mdi-content-clear red-text\"></i>")
             response.append(u"</th>")
             for server in servers:
                 if server not in self.services[cat][service].keys():
@@ -245,7 +247,7 @@ class Distributor(object):
             if cat == "web":
                 author = self.authors.get(service, "").strip()
                 if author == "":
-                    author = "<i class=\"mdi-social-person-add red-text text-lighten-1\"></i>"
+                    author = "<i class=\"mdi-social-person-add red-text\"></i>"
                 response.append(u"<td>%s</td>" % author)
             response.append(u"</tr>\n")
 
@@ -283,8 +285,7 @@ def get_configs(configs_dir):
                     with open("%s/%s.%s.all" % (
                             configs_dir,
                             filepath[filepath.rfind("/")+1:filepath.rfind(".")],
-                            server),
-                            "w") as config:
+                            server), "w") as config:
                         main_file = main_file.text
                         config.write(main_file)
                         for incl in re.findall(r"(?:^i|^[ \t]+i)nclude (.+);$",

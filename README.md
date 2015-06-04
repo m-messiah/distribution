@@ -22,10 +22,10 @@ Run `sudo -u apache sh -c 'cd /var/www/distributor && ./distributor.py'`
 
 ## Icons ##
 
-Heart - can't find /favicon.ico
-Android - can't find /robots.txt
-Android orange - /robots.txt not Text
-Arrow - redirect in requests.
++ :heart: - can't find /favicon.ico
++ Android - can't find /robots.txt
++ Android orange - /robots.txt not Text
++ :arrow_forward: - redirect in requests.
 Red cross - url not found.
-Announcement - X-Powered-By header found.
++ :speech_balloon: Announcement - X-Powered-By header found.
 
