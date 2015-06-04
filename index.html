@@ -1,0 +1,60 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <title>Distributor</title>
+    <link rel="icon" href="data:image/x-icon;base64,AAABAAEAEBAQAAAAAAAoAQAAFgAAACgAAAAQAAAAIAAAAAEABAAAAAAAgAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAA/wA3AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAERERAAARERERAAAAAAAAERAQAAAAAAEBEAEAAAAAEAEQABABEAEAARAAAQEQEAABAAAAAAAAAAAAAAABAAAAAAAAAAEAAAAAAAAAAQAAAAAAAAABAAAAAAAAAAAQAAAAAAABAAEAAAAAABAAABAAAAAAAQABAAAAAAAAERAAAAADwAAAP/wAAF/6AABv9gAAdm4AAHpeAAD//wAA/v8AAP7/AAD+/wAA/v8AAP9/AAD7vwAA998AAPu/AAD8fwAA" type="image/x-icon">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.96.1/css/materialize.min.css">
+    <style>
+        html{font-family:"Helvetica Neue",Helvetica,Arial,"Lucida Grande",sans-serif;font-weight:200;}
+        .tab-pane{max-width:1000px;padding-top:20px;}
+        .meta { font-size: 50%; font-weight: 100; }
+        .page-header { margin-top: 20px; }
+    </style>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.96.1/js/materialize.min.js"></script>
+</head>
+<body>
+    <div class="page-header">
+        <h1>Distributor <small id="last-sync" class="meta"></small></h1>
+    </div>
+
+    <div class="row">
+        <div id="col s12">
+            <ul class="tabs">
+                <li class="tab col s1"><a href="#tab-web" class="active">Web</a></li>
+                <li class="tab col s1"><a href="#tab-http">HTTP</a></li>
+                <li class="tab col s1"><a href="#tab-ldap">LDAP</a></li>
+                <li class="tab col s1"><a href="#tab-mail">Mail</a></li>
+                <li class="tab col s1"><a href="#tab-rdp">RDP</a></li>
+                <li class="tab col s1"><a href="#tab-sql">SQL</a></li>
+                <li class="tab col s1"><a href="#tab-ssh">SSH</a></li>
+                <li class="tab col s3"><a href="#tab-DNS_kontur_ru">example.com</a></li>
+                <li class="tab col s1"><a href="#tab-other">Other</a></li>
+            </ul>
+        </div>
+        <div class="col s10 offset-s1" id="tab-web"></div>
+        <div class="col s10 offset-s1" id="tab-http"></div>
+        <div class="col s10 offset-s1" id="tab-ldap"></div>
+        <div class="col s10 offset-s1" id="tab-mail"></div>
+        <div class="col s10 offset-s1" id="tab-rdp"></div>
+        <div class="col s10 offset-s1" id="tab-sql"></div>
+        <div class="col s10 offset-s1" id="tab-ssh"></div>
+        <div class="col s10 offset-s1" id="tab-DNS_example_com"></div>
+        <div class="col s10 offset-s1" id="tab-other"></div>
+    </div>
+</body>
+<script type="text/javascript">
+   $(document).ready(function() {
+        $("#last-sync").load("./categories/last_sync.html");
+        $("#tab-web").load("./categories/web.html");
+        $("#tab-http").load("./categories/http.html");
+        $("#tab-ldap").load("./categories/ldap.html");
+        $("#tab-mail").load("./categories/mail.html");
+        $("#tab-rdp").load("./categories/rdp.html");
+        $("#tab-sql").load("./categories/sql.html");
+        $("#tab-ssh").load("./categories/ssh.html");
+        $("#tab-DNS_example_com").load("./categories/DNS_example_com.html");
+        $("#tab-other").load("./categories/other.html");
+    });
+</script>
+</html>
