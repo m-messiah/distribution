@@ -1,3 +1,4 @@
 *.pyc
 categories/
 .idea/
+docs/_build*

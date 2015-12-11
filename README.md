@@ -16,7 +16,7 @@ and clearly show which of your frontends listen each service and ip address.
 
 ## Run ##
 
-Add your PRIVATE_TOKEN in **distributor.py** to get access repositories and fix url of your git server.
+Add your GIT_HOST and GIT_TOKEN in **distributor.py** to get access repositories and fix url of your git server.
 
 Run `sudo -u apache sh -c 'cd /var/www/distributor && ./distributor.py'`
 

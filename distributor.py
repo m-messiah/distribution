@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
-import string
 from pyparsing import (Literal, White, Word, alphanums, CharsNotIn,
                        Optional, Forward, Group, ZeroOrMore, OneOrMore,
                        QuotedString, restOfLine)
@@ -23,14 +22,14 @@ import tempfile
 import shutil
 from os import listdir
 from os.path import basename, splitext, dirname, join as pjoin
-from re import match, compile, DOTALL, MULTILINE, findall, M as REM
+from re import compile, DOTALL, MULTILINE, findall, M as REM
 import json
 from collections import defaultdict
 
 try:
     import credentials
 except ImportError:
-    print "No credentials file. Sync is unavailable"
+    print("No credentials file. Sync is unavailable")
 
 ICON = (" <i title=\"%(hint)s\" "
         "class=\"tiny material-icons %(color)s\">%(icon)s</i>")
@@ -174,7 +173,7 @@ class Distributor(object):
             elif "haproxy" in conf:
                 self.parse_haproxy(conf)
             else:
-                print "Parser for %s is not implemented" % conf
+                print("Parser for %s is not implemented" % conf)
 
     def parse_dns(self, conf):
         servers = [i.split(" ", 1) for i in open(conf).readlines()]
@@ -517,17 +516,18 @@ class Distributor(object):
 
 
 def get_configs(configs_dir):
+    # GitLab
     servers = ['server1', 'server2',
                'server3', 'server4']
     auth = {'PRIVATE-TOKEN': credentials.GIT_TOKEN}
-    url = "https://gitlab.com/api/v3/projects"
+    url = "https://%s/api/v3/projects" % credentials.GIT_HOST
 
     for server in servers:
         try:
             id_proj = requests.get("{0}/fronts%2F{1}".format(url, server),
                                    headers=auth).json()[u'id']
         except:
-            print "Repository %s does not exists" % server
+            print("Repository %s does not exists" % server)
         else:
             sha = requests.get("%s/%s/repository/commits"
                                % (url, id_proj),
@@ -571,110 +571,119 @@ def get_configs(configs_dir):
                 except:
                     pass
 
-    name_server = "ns.example.com"
-    keyring = dns.tsigkeyring.from_text(
-        {credentials.TSIG_NAME: credentials.TSIG_KEY}
-    )
-    for domain in ["example.com", "example.net"]:
-        try:
-            responses = query.xfr(name_server, dns_name.from_text(domain),
-                                  keyring=keyring,
-                                  keyname=credentials.TSIG_NAME,
-                                  keyalgorithm=dns.tsig.HMAC_SHA512)
-            with open("%s/dns.%s" % (configs_dir, domain), "w") as config:
-                for response in responses:
-                    for line in response.answer:
-                        config.write(line.to_text() + "\n")
-        except:
-            pass
+    # DNS
+    try:
+        name_server = credentials.DNS_SERVER
+        keyring = dns.tsigkeyring.from_text(
+            {credentials.TSIG_NAME: credentials.TSIG_KEY}
+        )
+        for domain in ["example.com", "example.net"]:
+            try:
+                responses = query.xfr(name_server, dns_name.from_text(domain),
+                                      keyring=keyring,
+                                      keyname=credentials.TSIG_NAME,
+                                      keyalgorithm=dns.tsig.HMAC_SHA512)
+                with open("%s/dns.%s" % (configs_dir, domain), "w") as config:
+                    for response in responses:
+                        for line in response.answer:
+                            config.write(line.to_text() + "\n")
+            except:
+                pass
+    except:
+        pass
 
     # NIC.ru
-    s = requests.Session()
-    login = s.post("https://www.nic.ru/login/manager/",
-                   data={'login': credentials.NIC_LOGIN,
-                         'client_type': 'NIC-D',
-                         'password': credentials.NIC_PASSWORD,
-                         'password_type': 'adm'})
-    if login.status_code == 200:
-        csv = s.get("https://www.nic.ru/manager/my_domains.cgi"
-                    "?step=srv.my_domains&view.format=csv",
-                    verify=False)
-        if csv.status_code == 200:
-            csv = csv.text.encode("utf8")
+    try:
+        s = requests.Session()
+        login = s.post("https://www.nic.ru/login/manager/",
+                       data={'login': credentials.NIC_LOGIN,
+                             'client_type': 'NIC-D',
+                             'password': credentials.NIC_PASSWORD,
+                             'password_type': 'adm'})
+        if login.status_code == 200:
+            csv = s.get("https://www.nic.ru/manager/my_domains.cgi"
+                        "?step=srv.my_domains&view.format=csv",
+                        verify=False)
+            if csv.status_code == 200:
+                csv = csv.text.encode("utf8")
 
-            def check_dns(domain, ns):
-                ns_s = filter(len, map(lambda s: s.strip(),
-                                       ns.replace('"', '').split(';')))
-                if len(ns_s) < 1:
-                    return {}
-                mess = dns.message.make_query(dns_name.from_text(domain),
-                                              dns.rdatatype.SOA)
-                result = {}
-                for ns in ns_s:
-                    try:
-                        name_s = dns_name.from_text(ns.split()[0]).to_text()
-                        answer = query.tcp(mess, name_s, timeout=2)
-                        if len(answer.authority):
-                            result[ns] = True
-                        else:
-                            rr = answer.answer[0][0]
-                            if rr.rdtype == dns.rdatatype.SOA:
+                def check_dns(domain, ns):
+                    ns_s = filter(len, map(lambda s: s.strip(),
+                                           ns.replace('"', '').split(';')))
+                    if len(ns_s) < 1:
+                        return {}
+                    mess = dns.message.make_query(dns_name.from_text(domain),
+                                                  dns.rdatatype.SOA)
+                    result = {}
+                    for ns in ns_s:
+                        try:
+                            name_s = dns_name.from_text(
+                                ns.split()[0]
+                            ).to_text()
+                            answer = query.tcp(mess, name_s, timeout=2)
+                            if len(answer.authority):
                                 result[ns] = True
                             else:
-                                result[ns] = False
+                                rr = answer.answer[0][0]
+                                if rr.rdtype == dns.rdatatype.SOA:
+                                    result[ns] = True
+                                else:
+                                    result[ns] = False
+                        except:
+                            result[ns] = False
+                    return result
+
+                def check_txt(domain, status):
+                    spf, dmarc = 1, 1
+                    if u"Не делегирован" in status.decode("utf8"):
+                        return spf, dmarc
+                    try:
+                        mess = dns.resolver.query(dns_name.from_text(domain),
+                                                  dns.rdatatype.TXT)
                     except:
-                        result[ns] = False
-                return result
-
-            def check_txt(domain, status):
-                spf, dmarc = 1, 1
-                if u"Не делегирован" in status.decode("utf8"):
-                    return spf, dmarc
-                try:
-                    mess = dns.resolver.query(dns_name.from_text(domain),
-                                              dns.rdatatype.TXT)
-                except:
-                    spf = 1
-                else:
-                    txts = [txt for rdata in mess for txt in rdata.strings]
-
-                    spfs = filter(lambda i: "v=spf1" in i, txts)
-                    if not spfs:
                         spf = 1
                     else:
-                        if "+all" in " ".join(spfs):
-                            spf = 2
+                        txts = [txt for rdata in mess for txt in rdata.strings]
+
+                        spfs = filter(lambda i: "v=spf1" in i, txts)
+                        if not spfs:
+                            spf = 1
                         else:
-                            spf = 0
-                try:
-                    mess = dns.resolver.query(
-                        dns_name.from_text("_dmarc." + domain),
-                        dns.rdatatype.TXT)
-                except:
-                    return spf, dmarc
-                else:
-                    txts = [txt for rdata in mess for txt in rdata.strings]
-
-                    if filter(lambda i: "v=DMARC1" in i, txts):
-                        dmarc = 0
+                            if "+all" in " ".join(spfs):
+                                spf = 2
+                            else:
+                                spf = 0
+                    try:
+                        mess = dns.resolver.query(
+                            dns_name.from_text("_dmarc." + domain),
+                            dns.rdatatype.TXT)
+                    except:
+                        return spf, dmarc
                     else:
-                        dmarc = 1
-                    return spf, dmarc
+                        txts = [txt for rdata in mess for txt in rdata.strings]
 
-            def get_dns_info(info):
-                return {
-                    'domain': info[0],
-                    'ns': check_dns(info[1], info[2]),
-                    'txt': check_txt(info[1], info[5]),
-                    'status': info[5],
-                    'sost': info[6],
-                    'till': info[7]
-                }
+                        if filter(lambda i: "v=DMARC1" in i, txts):
+                            dmarc = 0
+                        else:
+                            dmarc = 1
+                        return spf, dmarc
 
-            csv = map(lambda l: get_dns_info(l.split(",")),
-                      filter(len, csv.split("\n")[2:]))
-            with open("%s/nic" % configs_dir, "w") as config:
-                config.write(json.dumps(csv))
+                def get_dns_info(info):
+                    return {
+                        'domain': info[0],
+                        'ns': check_dns(info[1], info[2]),
+                        'txt': check_txt(info[1], info[5]),
+                        'status': info[5],
+                        'sost': info[6],
+                        'till': info[7]
+                    }
+
+                csv = map(lambda l: get_dns_info(l.split(",")),
+                          filter(len, csv.split("\n")[2:]))
+                with open("%s/nic" % configs_dir, "w") as config:
+                    config.write(json.dumps(csv))
+    except:
+        pass
 
 
 def create_html():
