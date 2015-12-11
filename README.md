@@ -2,7 +2,7 @@
 
 *Let me show, where your service*
 
-![Docs](https://readthedocs.org/projects/distributor/badge/?version=latest&style=flat-square)
+[![Docs](https://readthedocs.org/projects/distributor/badge/?version=latest&style=flat-square)](http://distributor.readthedocs.org/ru/latest/)
 
 ## What is it? ##
 
