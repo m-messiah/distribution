@@ -2,6 +2,8 @@
 
 *Let me show, where your service*
 
+![Docs](https://readthedocs.org/projects/distributor/badge/?version=latest&style=flat-square)
+
 ## What is it? ##
 
 When you have many frontend servers - it's a big headache to know, which of them listens your service now, especcially, if you recently moved some services between frontend balancers.
