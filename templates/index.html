@@ -3,7 +3,7 @@
 <head>
     <title>Distributor</title>
     <link rel="icon" href="data:image/x-icon;base64,AAABAAEAEBAQAAAAAAAoAQAAFgAAACgAAAAQAAAAIAAAAAEABAAAAAAAgAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAA/wA3AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAERERAAARERERAAAAAAAAERAQAAAAAAEBEAEAAAAAEAEQABABEAEAARAAAQEQEAABAAAAAAAAAAAAAAABAAAAAAAAAAEAAAAAAAAAAQAAAAAAAAABAAAAAAAAAAAQAAAAAAABAAEAAAAAABAAABAAAAAAAQABAAAAAAAAERAAAAADwAAAP/wAAF/6AABv9gAAdm4AAHpeAAD//wAA/v8AAP7/AAD+/wAA/v8AAP9/AAD7vwAA998AAPu/AAD8fwAA" type="image/x-icon">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.0/css/materialize.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.3/css/materialize.min.css">
     <style>
         html{font-family:"San Francisco Display","Helvetica Neue",Helvetica,Arial,"Lucida Grande",sans-serif;font-weight:300;}
         .meta { font-size: 50%; font-weight: 100; }
@@ -16,13 +16,13 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.1/js/materialize.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.3/js/materialize.min.js"></script>
 </head>
 <body>
     <nav>
       <div class="nav-wrapper">
         <a href="#!" class="brand-logo">Distributor
-        <small id="last-sync" class="meta"></small></a>
+        <small class="meta">{{ last_sync }}</small></a>
         <a href="#" data-activates="mobile-navbar" class="button-collapse"><i class="material-icons">menu</i></a>
         <ul class="right hide-on-med-and-down">
             <li class="active"><a class="waves-effect" href="#" id="web">Web</a></li>
@@ -34,7 +34,6 @@
         </ul>
       </div>
     </nav>
-    <!-- haproxy dropdown -->
     <ul id="haproxy_dropdown" class="dropdown-content">
         <li><a href="#" id="http">HTTP</a></li>
         <li><a href="#" id="ldap">LDAP</a></li>
@@ -47,8 +46,9 @@
     </ul>
     <!-- bind dropdown -->
     <ul id="bind_dropdown" class="dropdown-content">
-        <li><a href="#" id="DNS_example_com">example.com</a></li>
-        <li><a href="#" id="DNS_example_net">example.net</a></li>
+    {% for zone in bind_zones %}
+        <li><a href="#" id="DNS_{{ zone | replace('.', '_') }}">{{ zone }}</a></li>
+    {% endfor %}
     </ul>
 
     <ul class="side-nav" id="mobile-navbar">
@@ -81,8 +81,9 @@
                 <a class="collapsible-header">Bind</a>
                 <div class="collapsible-body">
                   <ul>
-                    <li><a href="#" id="DNS_example_com">example.com</a></li>
-                    <li><a href="#" id="DNS_example_net">example.net</a></li>
+                  {% for zone in bind_zones %}
+                      <li><a href="#" id="DNS_{{ zone | replace('.', '_') }}">{{ zone }}</a></li>
+                  {% endfor %}
                   </ul>
                 </div>
               </li>
@@ -137,7 +138,6 @@
         });
     }
     $(document).ready(function() {
-        $("#last-sync").load("./categories/last_sync.html");
         $("#content").load("./categories/web.html");
         $(".button-collapse").sideNav({closeOnClick: true});
 

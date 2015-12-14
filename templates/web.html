@@ -1,58 +1,33 @@
 <div class="row checkboxes">
-    <div class="col s6 m2 offset-m1">
-        <input type="checkbox" id="ch-europe" />
-        <label for="ch-europe">Europe</label>
+    {% for column in columns %}
+    <div class="col s6 m1 {% if loop.first %}offset-m2{% endif %}">
+        <input type="checkbox" id="ch-{{ column }}" {% if loop.first or loop.last %}checked="true"{% endif %} />
+        <label for="ch-{{ column }}">{{ column | capitalize}}</label>
     </div>
-    <div class="col s6 m2">
-        <input type="checkbox" id="ch-asia" checked="true" />
-        <label for="ch-asia">Asia</label>
-    </div>
-    <div class="col s6 m2">
-        <input type="checkbox" id="ch-america" />
-        <label for="ch-america">America</label>
-    </div>
-    <div class="col s6 m2">
-        <input type="checkbox" id="ch-australia" />
-        <label for="ch-australia">Australia</label>
-    </div>
-    <div class="col s6 m2">
-        <input type="checkbox" id="ch-author" checked="true" />
-        <label for="ch-author">Author</label>
-    </div>
+    {% endfor %}
 </div>
 <script>
-    $('#ch-europe').on("click", function() {
-        if ($(this).prop("checked")) {$('th:nth-child(2)').show(); $('td:nth-child(2)').show();$('tr.zone0').show();}
-        else { $('th:nth-child(2)').hide();$('td:nth-child(2)').hide();$('tr.zone0').hide();}
-    });
-    $('#ch-asia').on("click", function() {
+{% for column in columns %}
+    $('#ch-{{ column }}').on("click", function() {
         if ($(this).prop("checked")) {
-            $('th:nth-child(3)').show(); $('td:nth-child(3)').show();
-            $('th:nth-child(5)').show(); $('td:nth-child(5)').show();
-            $('tr.zone1').show(); $('tr.zone3').show();
+            $('th:nth-child({{ loop.index0 + 2 }})').show();
+            $('td:nth-child({{ loop.index0 + 2 }})').show();
+            $('tr.zone{{ loop.index0 }}').show();
+        } else {
+            $('th:nth-child({{ loop.index0 + 2 }})').hide();
+            $('td:nth-child({{ loop.index0 + 2 }})').hide();
+            $('tr.zone{{ loop.index0 }}').hide();
         }
-        else {
-            $('th:nth-child(3)').hide();$('td:nth-child(3)').hide();
-            $('th:nth-child(5)').hide();$('td:nth-child(5)').hide();
-            $('tr.zone1').hide(); $('tr.zone3').hide();
-        }
     });
-    $('#ch-america').on("click", function() {
-        if ($(this).prop("checked")) {$('th:nth-child(4)').show(); $('td:nth-child(4)').show();$('tr.zone2').show();}
-        else { $('th:nth-child(4)').hide();$('td:nth-child(4)').hide();$('tr.zone2').hide();}
-    });
-    $('#ch-australia').on("click", function() {
-        if ($(this).prop("checked")) {$('th:nth-child(6)').show(); $('td:nth-child(6)').show(); $('tr.zone4').show();}
-        else { $('th:nth-child(6)').hide();$('td:nth-child(6)').hide();$('tr.zone4').hide();}
-    });
-    $('#ch-author').on("click", function() {
-        if ($(this).prop("checked")) {$('th:nth-child(7)').show(); $('td:nth-child(7)').show();}
-        else { $('th:nth-child(7)').hide();$('td:nth-child(7)').hide();}
-    });
+{% endfor %}
     $(document).ready(function(){
-        $('th:nth-child(2)').hide();$('td:nth-child(2)').hide();
-        $('th:nth-child(4)').hide();$('td:nth-child(4)').hide();
-        $('th:nth-child(6)').hide();$('td:nth-child(6)').hide();
-        $('tr.zone0').hide(); $('tr.zone2').hide(); $('tr.zone4').hide();
+        {% for column in columns %}
+            {% if not (loop.first or loop.last) %}
+                $('th:nth-child({{ loop.index0 + 2 }})').hide();
+                $('td:nth-child({{ loop.index0 + 2 }})').hide();
+                $('tr.zone{{ loop.index0 }}').hide();
+            {% endif %}
+        {% endfor %}
     });
 </script>
+{{ table }}

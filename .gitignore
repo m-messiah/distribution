@@ -1,5 +1,6 @@
+/index.html
 *.pyc
-settings.py
-categories/
+/settings.py
+/categories/
 .idea/
-docs/_build*
+/docs/_build*

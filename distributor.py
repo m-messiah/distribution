@@ -25,6 +25,7 @@ from os.path import basename, splitext, dirname, join as pjoin
 from re import match, compile, DOTALL, MULTILINE, findall, M as REM
 import json
 from collections import defaultdict
+from jinja2 import Environment, FileSystemLoader, TemplateNotFound, Template
 
 try:
     import settings
@@ -68,6 +69,9 @@ DOUBLE_HEADER_SAME = ICON % {"color": "orange-text", "icon": "filter_2",
 NO_H1 = "&lt;h1&gt;"
 NO_TITLE = "&lt;title&gt;"
 NO_DESCRIPTION = "&lt;descr&gt;"
+
+TEMPLATES = Environment(loader=FileSystemLoader("./templates"),
+                        trim_blocks=True)
 
 
 class NginxParser(object):
@@ -341,12 +345,6 @@ class Distributor(object):
             u'<table class="hoverable" id="%s-table">' % cat,
             u'<thead><tr><th>Services</th>']
 
-        try:
-            response = open("./templates/%s.html" % cat,
-                            "r").readlines() + response
-        except IOError:
-            pass
-
         servers = set()
         for service in self.services[cat].keys():
             for server_name in self.services[cat][service].keys():
@@ -357,6 +355,7 @@ class Distributor(object):
                     pass
                 servers.add(server_name)
         servers = sorted(servers)
+        columns = servers + ["author"]
         for server in servers:
             response.append(u"<th>%s</th>" % server)
         if cat == "web" or cat == "promo" or cat == "stream":
@@ -399,8 +398,10 @@ class Distributor(object):
             response.append(DOTTED if dotted else "")
             skipped_cat = False
             try:
-                if settings.SKIPPED in self.services[cat][service].keys():
-                    skipped_cat = True
+                for candidate in settings.SKIPPED:
+                    if candidate in self.services[cat][service].keys():
+                        skipped_cat = True
+                        break
             except AttributeError:
                 pass
             if (cat == "web" or cat == "promo") and not skipped_cat:
@@ -534,7 +535,12 @@ class Distributor(object):
             response.append(u"</tr>\n")
 
         response.append(u"</tbody></table>")
-        return u"".join(response)
+        try:
+            template = TEMPLATES.get_template(cat + ".html")
+        except TemplateNotFound:
+            template = Template("{{table}}")
+
+        return template.render(table=u"".join(response), columns=columns)
 
 
 def get_configs(configs_dir):
@@ -730,8 +736,13 @@ def create_html():
 
         json.dump(distrib.api, open("./categories/api.json", "w"))
 
-        with open("./categories/last_sync.html", "w") as last_sync:
-            last_sync.write(datetime.datetime.now().strftime("%d %B %H:%M %A"))
+        last_sync = datetime.datetime.now().strftime("%d %B %H:%M %A")
+
+        with open("./index.html", "w") as index_html:
+            index_html.write(
+                TEMPLATES.get_template("index.html")
+                .render(last_sync=last_sync, bind_zones=settings.DOMAINS)
+            )
 
     except Exception as e:
         with open("error.log", "w") as error:
