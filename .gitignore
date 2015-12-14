@@ -1,4 +1,5 @@
 *.pyc
+settings.py
 categories/
 .idea/
 docs/_build*

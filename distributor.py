@@ -22,14 +22,14 @@ import tempfile
 import shutil
 from os import listdir
 from os.path import basename, splitext, dirname, join as pjoin
-from re import compile, DOTALL, MULTILINE, findall, M as REM
+from re import match, compile, DOTALL, MULTILINE, findall, M as REM
 import json
 from collections import defaultdict
 
 try:
-    import credentials
+    import settings
 except ImportError:
-    print("No credentials file. Sync is unavailable")
+    print("No settings.py file. Sync is unavailable")
 
 ICON = (" <i title=\"%(hint)s\" "
         "class=\"tiny material-icons %(color)s\">%(icon)s</i>")
@@ -164,14 +164,15 @@ class Distributor(object):
 
     def generate(self):
         for conf in listdir(self.configs):
+            conf_file = pjoin(self.configs, conf)
             if "dns" in conf:
-                self.parse_dns(conf)
+                self.parse_dns(conf_file)
             elif "nic" in conf:
-                self.parse_nic(conf)
+                self.parse_nic(conf_file)
             elif "nginx" in conf:
-                self.parse_nginx(conf)
+                self.parse_nginx(conf_file)
             elif "haproxy" in conf:
-                self.parse_haproxy(conf)
+                self.parse_haproxy(conf_file)
             else:
                 print("Parser for %s is not implemented" % conf)
 
@@ -205,6 +206,11 @@ class Distributor(object):
     def parse_nginx(self, conf):
         servers = NginxParser().parse(open(conf).read())
         server_name = basename(conf).replace(".all", "").replace("nginx.", "")
+        try:
+            if match(settings.SAME_HOST, server_name):
+                server_name = server_name[:2]
+        except AttributeError:
+            pass
 
         if 'web' not in self.api:
             self.api['web'] = {'servers': {}, 'log_format': {}}
@@ -277,6 +283,11 @@ class Distributor(object):
                      for i in self.re_haproxy.findall(open(conf).read())]
 
         server = basename(conf).replace("haproxy.", "").replace(".all", "")
+        try:
+            if match(settings.SAME_HOST, server):
+                server = server[:2]
+        except AttributeError:
+            pass
 
         for listener in listeners:
             if listener[0] == "stat":
@@ -339,6 +350,11 @@ class Distributor(object):
         servers = set()
         for service in self.services[cat].keys():
             for server_name in self.services[cat][service].keys():
+                try:
+                    if match(settings.SAME_HOST, server_name):
+                        server_name = server_name[:2]
+                except AttributeError:
+                    pass
                 servers.add(server_name)
         servers = sorted(servers)
         for server in servers:
@@ -381,7 +397,13 @@ class Distributor(object):
                 clear_service = "https://" + clear_service.replace(":443", "")
             response.append(clear_service)
             response.append(DOTTED if dotted else "")
-            if cat == "web" or cat == "promo":
+            skipped_cat = False
+            try:
+                if settings.SKIPPED in self.services[cat][service].keys():
+                    skipped_cat = True
+            except AttributeError:
+                pass
+            if (cat == "web" or cat == "promo") and not skipped_cat:
                 history = 0
                 if "https://" in clear_service:
                     url = clear_service
@@ -517,71 +539,81 @@ class Distributor(object):
 
 def get_configs(configs_dir):
     # GitLab
-    servers = ['server1', 'server2',
-               'server3', 'server4']
-    auth = {'PRIVATE-TOKEN': credentials.GIT_TOKEN}
-    url = "https://%s/api/v3/projects" % credentials.GIT_HOST
+    try:
+        servers = settings.SERVERS
+        auth = {'PRIVATE-TOKEN': settings.GIT_TOKEN}
+        url = "https://%s/api/v3/projects" % settings.GIT_HOST
 
-    for server in servers:
-        try:
-            id_proj = requests.get("{0}/fronts%2F{1}".format(url, server),
-                                   headers=auth).json()[u'id']
-        except:
-            print("Repository %s does not exists" % server)
-        else:
-            sha = requests.get("%s/%s/repository/commits"
-                               % (url, id_proj),
-                               headers=auth).json()[0][u'id']
-            for filepath in ['usr/local/etc/nginx/nginx.conf',
-                             'usr/local/etc/haproxy/haproxy.cfg',
-                             'nginx.conf']:
-                try:
-                    params = {'filepath': filepath}
-                    main_file = requests.get("%s/%s/repository/blobs/%s"
-                                             % (url, id_proj, sha),
-                                             params=params, headers=auth)
-                    if main_file.status_code != 200:
-                        continue
-                    with open(
-                            pjoin(configs_dir, "%s.%s.all"
-                                  % (splitext(basename(filepath))[0], server)),
-                            "w") as config:
-                        main_file = main_file.text
+        for server in servers:
+            try:
+                id_proj = requests.get(
+                    "%s/%s%%2F%s" % (url, settings.GIT_GROUP, server),
+                    headers=auth
+                ).json()[u'id']
+            except:
+                print("Repository %s does not exists" % server)
+            else:
+                sha = requests.get(
+                    "%s/%s/repository/commits" % (url, id_proj),
+                    headers=auth).json()[0][u'id']
+                for filepath in ['usr/local/etc/nginx/nginx.conf',
+                                 'usr/local/etc/haproxy/haproxy.cfg',
+                                 'etc/nginx/nginx.conf',
+                                 'etc/haproxy/haproxy.cfg',
+                                 'nginx.conf']:
+                    try:
+                        params = {'filepath': filepath}
+                        main_file = requests.get(
+                            "%s/%s/repository/blobs/%s" % (url, id_proj, sha),
+                            params=params, headers=auth)
+                        if main_file.status_code != 200:
+                            continue
+                        with open(
+                                pjoin(
+                                    configs_dir,
+                                    "%s.%s.all"
+                                    % (splitext(basename(filepath))[0],
+                                       server)),
+                                "w") as config:
+                            main_file = main_file.text
 
-                        for incl in findall(
-                                r"(?:^i|^[ \t]+i)nclude (.+);$",
-                                main_file, REM):
-                            try:
-                                params = {
-                                    'filepath': pjoin(dirname(filepath), incl)
-                                }
-                                include_file = requests.get(
-                                    "%s/%s/repository/blobs/%s"
-                                    % (url, id_proj, sha),
-                                    params=params,
-                                    headers=auth
-                                )
-                                if include_file.status_code == 200:
-                                    main_file = main_file.replace(
-                                        "include " + incl + ";",
-                                        include_file.text)
-                            except:
-                                pass
-                        config.write(main_file)
-                except:
-                    pass
-
+                            for incl in findall(
+                                    r"(?:^i|^[ \t]+i)nclude (.+);$",
+                                    main_file, REM):
+                                try:
+                                    params = {
+                                        'filepath': pjoin(dirname(filepath),
+                                                          incl)
+                                    }
+                                    include_file = requests.get(
+                                        "%s/%s/repository/blobs/%s"
+                                        % (url, id_proj, sha),
+                                        params=params,
+                                        headers=auth
+                                    )
+                                    if include_file.status_code == 200:
+                                        main_file = main_file.replace(
+                                            "include " + incl + ";",
+                                            include_file.text)
+                                except:
+                                    pass
+                            config.write(main_file)
+                    except:
+                        pass
+    except:
+        pass
     # DNS
     try:
-        name_server = credentials.DNS_SERVER
+        name_server = settings.DNS_SERVER
         keyring = dns.tsigkeyring.from_text(
-            {credentials.TSIG_NAME: credentials.TSIG_KEY}
+            {settings.TSIG_NAME: settings.TSIG_KEY}
         )
-        for domain in ["example.com", "example.net"]:
+        for domain in settings.DOMAINS:
             try:
-                responses = query.xfr(name_server, dns_name.from_text(domain),
+                responses = query.xfr(name_server,
+                                      dns_name.from_text(domain),
                                       keyring=keyring,
-                                      keyname=credentials.TSIG_NAME,
+                                      keyname=settings.TSIG_NAME,
                                       keyalgorithm=dns.tsig.HMAC_SHA512)
                 with open("%s/dns.%s" % (configs_dir, domain), "w") as config:
                     for response in responses:
@@ -596,9 +628,9 @@ def get_configs(configs_dir):
     try:
         s = requests.Session()
         login = s.post("https://www.nic.ru/login/manager/",
-                       data={'login': credentials.NIC_LOGIN,
+                       data={'login': settings.NIC_LOGIN,
                              'client_type': 'NIC-D',
-                             'password': credentials.NIC_PASSWORD,
+                             'password': settings.NIC_PASSWORD,
                              'password_type': 'adm'})
         if login.status_code == 200:
             csv = s.get("https://www.nic.ru/manager/my_domains.cgi"
@@ -618,7 +650,7 @@ def get_configs(configs_dir):
                     for ns in ns_s:
                         try:
                             name_s = dns_name.from_text(
-                                ns.split()[0]
+                                    ns.split()[0]
                             ).to_text()
                             answer = query.tcp(mess, name_s, timeout=2)
                             if len(answer.authority):

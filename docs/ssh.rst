@@ -15,23 +15,20 @@
     for server in servers:
         call([
             "scp",
-            "{0}.example.com:/etc/nginx/nginx.conf".format(server),
-            "./configs/nginx.{0}.all".format(server)
+            "%s.example.com:/etc/nginx/nginx.conf" % server,
+            "%s/nginx.%s.all" % (configs_dir, server)
         ])
-        config = open("./configs/nginx.{0}.all".format(server), "r").read()
+        config = open("%s/nginx.%s.all" % (configs_dir, server), "r").read()
 
-        with open("./configs/nginx.{0}.all".format(server), "a") as main:
-            for incl in re.findall(r"(?:^i|^ +i)nclude (.+);$",
-                                   config, re.M):
+        with open("%s/nginx.%s.all" % (configs_dir, server), "a") as main:
+            for incl in re.findall(r"(?:^i|^ +i)nclude (.+);$", config, re.M):
                 inc_conf = check_output([
-                    "ssh",
-                    "{0}.example.com".format(server),
-                    "cat",
-                    "/etc/nginx/{0}".format(incl)
+                    "ssh", "%s.example.com" % server,
+                    "cat", "/etc/nginx/%s" % incl
                 ])
                 config = config.replace("include " + incl + ";", inc_conf)
             main.write(conf)
 
         call(["scp",
-              "{0}.example.com:/etc/haproxy/haproxy.cfg".format(server),
-              "./configs/haproxy.{0}.all".format(server)])
+              "%s.example.com:/etc/haproxy/haproxy.cfg" % server,
+              "%s/haproxy.%s.all" % (configs_dir, server)])
