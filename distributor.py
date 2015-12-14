@@ -20,8 +20,8 @@ import errno
 import requests
 import tempfile
 import shutil
-from os import listdir
-from os.path import basename, splitext, dirname, join as pjoin
+from os import listdir, makedirs
+from os.path import basename, splitext, dirname, isdir, join as pjoin
 from re import match, compile, DOTALL, MULTILINE, findall, M as REM
 import json
 from collections import defaultdict
@@ -726,26 +726,37 @@ def get_configs(configs_dir):
 
 def create_html():
     temp_dir = tempfile.mkdtemp()
+    output = "."
+    output_dir = pjoin(output, "categories")
+    try:
+        makedirs(output_dir)
+    except OSError as exc:
+        from errno import EEXIST
+        if exc.errno == EEXIST and isdir(output_dir):
+            pass
+        else:
+            print("Can't create directory %s" % output_dir)
+            exit(1)
     try:
         get_configs(temp_dir)
         distrib = Distributor(temp_dir)
         for cat in sorted(distrib.services.keys()):
             cat_html = distrib.write(cat).encode("utf8")
-            with open("./categories/" + cat + ".html", "w") as w:
+            with open(pjoin(output_dir, cat + ".html"), "w") as w:
                 w.write(cat_html)
 
-        json.dump(distrib.api, open("./categories/api.json", "w"))
+        json.dump(distrib.api, open(pjoin(output_dir, "api.json"), "w"))
 
         last_sync = datetime.datetime.now().strftime("%d %B %H:%M %A")
 
-        with open("./index.html", "w") as index_html:
+        with open(pjoin(output, "index.html"), "w") as index_html:
             index_html.write(
                 TEMPLATES.get_template("index.html")
                 .render(last_sync=last_sync, bind_zones=settings.DOMAINS)
             )
 
     except Exception as e:
-        with open("error.log", "w") as error:
+        with open(pjoin(output, "error.log"), "w") as error:
             error.write("%s\tException while creating html: %s\n" % (
                 datetime.datetime.now().strftime("%d %B %H:%M %A"), e))
         return
