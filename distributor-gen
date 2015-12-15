@@ -1,0 +1,9 @@
+#!/usr/bin/env python
+# coding=utf-8
+from distributor import create_html
+import sys
+__author__ = 'm_messiah'
+
+
+if __name__ == '__main__':
+    create_html(sys.argv[1:])

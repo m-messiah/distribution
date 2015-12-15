@@ -1,20 +1,20 @@
 Конфигурация
 ============
 
+Вся настройка производится через ini файл, передаваемый в параметре `--conf (-c)`
 
 GitLab
 ------
 
-Для использования со своим GitLab сервером, необходимо создать файл `settings.py` с обьявлением переменных:
+..  code:: ini
 
-..  code:: python
-
-    GIT_HOST = git.example.com # Адрес gitlab сервера
-    GIT_TOKEN = "" # Ваш API токен, для доступа к репозиториям
-    GIT_GROUP = "" # GitLab-группа, в которой размещены репозитории с конфигами
-    SERVERS = ['eu-front1', 'eu-front2', 'us-front1', 'us-front2', 'int-front'] # Список серверов-названий проектов в git
-    SAME_HOST = "\w\w\-front\d" # Смерджит конфиги eu-front1 и eu-front2, отображая их как "eu"
-    SKIPPED = "int" # Если SKIPPED в названии сервера, то к nginx не будут применяться проверки доступности. (например, если там локальные адреса)
+    [git]
+    host = git.example.com # Адрес gitlab сервера
+    token = "" # Ваш API токен, для доступа к репозиториям
+    group = "" # GitLab-группа, в которой размещены репозитории с конфигами
+    servers = eu-front1,eu-front2,us-front1,us-front2,int-front # Список серверов-названий проектов в git
+    same_host = \w\w\-front\d # Смерджит конфиги eu-front1 и eu-front2, отображая их как "eu"
+    skipped = int # Если skipped в названии сервера, то к nginx не будут применяться проверки доступности. (например, если там локальные адреса)
 
 .. _conf-nginx:
 Nginx

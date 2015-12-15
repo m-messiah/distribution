@@ -1,0 +1,3 @@
+include distributor-gen
+include README.rst
+include distributor/templates/*

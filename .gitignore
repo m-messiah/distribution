@@ -1,6 +1,9 @@
-/index.html
 *.pyc
-/settings.py
-/categories/
+/distributor/settings.py
 .idea/
 /docs/_build*
+/web/
+/config.ini
+/dist
+/distributor.egg-info
+/MANIFEST
