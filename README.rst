@@ -7,20 +7,15 @@ Distributor
 
 .. image:: https://img.shields.io/pypi/v/distributor.svg?style=flat-square
     :target: https://pypi.python.org/pypi/distributor
-
-
-
-.. image:: https://img.shields.io/pypi/dm/distributor.svg?style=flat-square
-        :target: https://pypi.python.org/pypi/dsitributor
-        :alt: PyPI latest version
+    :alt: PyPI latest version
 
 .. image:: https://img.shields.io/pypi/dm/distributor.svg?style=flat-square
-        :target: https://pypi.python.org/pypi/dsitributor
-        :alt: PyPI downloads/month
+    :target: https://pypi.python.org/pypi/dsitributor
+    :alt: PyPI downloads/month
 
 .. image:: https://readthedocs.org/projects/distributor/badge/?version=latest
-        :target: http://distributor.readthedocs.org/ru/latest/?badge=latest
-        :alt: Documentation Status
+    :target: http://distributor.readthedocs.org/ru/latest/?badge=latest
+    :alt: Documentation Status
     
     
 What is it?

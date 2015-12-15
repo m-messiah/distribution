@@ -506,7 +506,9 @@ class Distributor(object):
                         for head_name, header in r.headers.items():
                             if "set-cookie" in head_name:
                                 continue
-                            h = map(lambda s: s.strip(), header.split(","))
+                            h = list(
+                                map(lambda s: s.strip(), header.split(","))
+                            )
                             if len(h) > len(set(h)):
                                 response.append(
                                     self.icons['DOUBLE_HEADER_SAME']
@@ -530,7 +532,9 @@ class Distributor(object):
                         for head_name, header in r.headers.items():
                             if "set-cookie" in head_name:
                                 continue
-                            h = map(lambda s: s.strip(), header.split(","))
+                            h = list(
+                                map(lambda s: s.strip(), header.split(","))
+                            )
                             if len(h) > len(set(h)):
                                 response.append(
                                     self.icons['DOUBLE_HEADER_SAME']
@@ -864,13 +868,13 @@ def create_html(argv):
 
         open(pjoin(args.output, "index.html"), "w").write(distrib.index())
 
-    #except Exception as e:
-    #    logging.error("Exception while creating html: %s" % e)
-    #    exit(1)
+    except Exception as e:
+        logging.error("Exception while creating html: %s" % e)
+        exit(1)
     finally:
         try:
-            print(temp_dir)
-            # shutil.rmtree(temp_dir)
+            # print(temp_dir)
+            shutil.rmtree(temp_dir)
         except OSError as exc:
             if exc.errno != errno.ENOENT:
                 raise
