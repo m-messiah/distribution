@@ -1,33 +1,48 @@
-# Distributor #
+Distributor
+===========
 
-*Let me show, where your service*
+..  epigraph::
+    *"Let me show, where your service"*
+    
 
-[![Docs](https://readthedocs.org/projects/distributor/badge/?version=latest&style=flat-square)](http://distributor.readthedocs.org/ru/latest/)
+.. image:: https://img.shields.io/pypi/v/distributor.svg?style=flat-square
+    :target: https://pypi.python.org/pypi/distributor
 
-## What is it? ##
 
-When you have many frontend servers - it's a big headache to know, which of them listens your service now, especcially, if you recently moved some services between frontend balancers.
 
-**Distributor** is a web app, which can get Nginx and HAproxy configurations from your frontend servers,
-and clearly show which of your frontends listen each service and ip address.
+.. image:: https://img.shields.io/pypi/dm/distributor.svg?style=flat-square
+        :target: https://pypi.python.org/pypi/dsitributor
+        :alt: PyPI latest version
 
-## How it works? ##
+.. image:: https://img.shields.io/pypi/dm/distributor.svg?style=flat-square
+        :target: https://pypi.python.org/pypi/dsitributor
+        :alt: PyPI downloads/month
 
-**Distributor** is a Script for generating html files.
-**Distributor** must have access to your GITlab server, where your frontends push their /etc/{nginx,haproxy} files.
+.. image:: https://readthedocs.org/projects/distributor/badge/?version=latest
+        :target: http://distributor.readthedocs.org/ru/latest/?badge=latest
+        :alt: Documentation Status
+    
+    
+What is it?
+-----------
 
-## Run ##
+When you have many frontend servers - it's a big headache to know, which of them listens your service now, especially, if you often need to move some services between groups of frontend balancers.
+Moreover, if you have so many domain names, it is also difficult to monitor their actuality without automatic systems.
+ 
+**Distributor** is a web app, which can get Nginx and HAproxy configurations from your frontend servers, and clearly show which of your frontends listen each service and ip address.
 
-Add your GIT_HOST and GIT_TOKEN in **distributor.py** to get access repositories and fix url of your git server.
+How it works?
+-------------
 
-Run `sudo -u apache sh -c 'cd /var/www/distributor && ./distributor.py'`
+**Distributor** can get configs from GitLab, where frontends push their Nginx and HAproxy configs, also it can get dns zone transfers and handle list of your domains from nic.ru. 
 
-## Icons ##
+If your fronts doesn't push their configs, you need to customize code to get configs from other places.
 
-+ :heart: - can't find /favicon.ico
-+ Android - can't find /robots.txt
-+ Android orange - /robots.txt not Text
-+ :arrow_forward: - redirect in requests.
-Red cross - url not found.
-+ :speech_balloon: Announcement - X-Powered-By header found.
+Usage
+-----
 
+..  code:: bash
+
+    sudo -u www-data distributor-gen -c config.ini -l distributor.log -o /var/www/
+    
+Where config.ini is your config file as described in documentation, and /var/www/ is the directory, which published by some static web-server.
