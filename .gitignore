@@ -1,7 +1,7 @@
 *.pyc
-/distributor/settings.py
 .idea/
 /docs/_build*
+/build/
 /web/
 /config.ini
 /dist

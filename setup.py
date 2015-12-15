@@ -4,7 +4,7 @@ from sys import version_info
 
 setup(
     name='distributor',
-    version='2.0',
+    version='2.1',
     packages=['distributor'],
     include_package_data=True,
     url='https://github.com/m-messiah/distributor',

@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
 import logging
-
 from pyparsing import (Literal, White, Word, alphanums, CharsNotIn,
                        Optional, Forward, Group, ZeroOrMore, OneOrMore,
                        QuotedString, restOfLine)
@@ -833,13 +832,14 @@ def create_html(argv):
     parser.add_argument("-l", "--log", help="Logfile (default=console)",
                         metavar="distributor.log")
     args = parser.parse_args(argv)
-
-    try:
-        if args.log:
-            fh = logging.FileHandler(args.log)
-            logging.getLogger().addHandler(fh)
-    except:
-        pass
+    
+    if args.log:
+        logging.basicConfig(
+            format=u'%(asctime)s\t%(levelname)s\t%(message)s',
+            filename=args.log
+        )
+    else:
+        logging.basicConfig(format=u'%(asctime)s\t%(levelname)s\t%(message)s')
 
     temp_dir = tempfile.mkdtemp()
     output_dir = pjoin(args.output, "categories")
@@ -853,6 +853,7 @@ def create_html(argv):
             logging.error("Can't create directory %s" % output_dir)
             exit(1)
     try:
+        1/0
         distrib = Distributor(temp_dir, args.settings)
         for cat in sorted(distrib.services.keys()):
             cat_html = distrib.write(cat)
