@@ -5,6 +5,15 @@
     *"Покажи мне где твои сервисы и я скажу, что ты ошибаешься."*
 
 
+.. image:: https://img.shields.io/pypi/v/distributor.svg?style=flat-square
+    :target: https://pypi.python.org/pypi/distributor
+    :alt: PyPI latest version
+
+.. image:: https://img.shields.io/pypi/dm/distributor.svg?style=flat-square
+    :target: https://pypi.python.org/pypi/dsitributor
+    :alt: PyPI downloads/month
+
+
 Когда у вас много серверов-фронтов, попытка уследить какие адреса и приложения слушаются на каком из них становится большой головнй болью, в особенности, если необходимо часто перемещать различные приложения между разными группами балансировщиков.
 Более того, при таком количестве доменов, уследить за их актуальности также не представляется возможным без использования автоматизации.
 

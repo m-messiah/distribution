@@ -4,12 +4,14 @@
 ========
 
 .. _checks-nginx:
+
 Nginx
 -----
 
 Все ``server {}`` из nginx делятся на два типа: HTTP и TCP Stream, валидацию проходят только первые.
 
 .. _checks-nginx-http:
+
 HTTP
 ~~~~
 
@@ -24,6 +26,7 @@ HTTP
 
 
 .. _checks-nginx-http-promo:
+
 Promo
 ~~~~~
 
@@ -54,6 +57,7 @@ HAProxy
 
 
 .. _checks-nic:
+
 NIC.ru
 ------
 

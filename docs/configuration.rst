@@ -23,6 +23,7 @@ GitLab
     skipped = int
 
 .. _conf-nginx:
+
 Nginx
 ~~~~~
 
