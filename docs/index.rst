@@ -13,7 +13,7 @@
     :target: https://pypi.python.org/pypi/dsitributor
     :alt: PyPI downloads/month
 
-.. image:: https://travis-ci.org/m-messiah/distributor.svg?branch=master
+.. image:: https://travis-ci.org/m-messiah/distributor.svg?branch=master&style=flat-square
     :target: https://travis-ci.org/m-messiah/distributor
 
 

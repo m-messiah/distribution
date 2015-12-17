@@ -13,10 +13,10 @@ Distributor
     :target: https://pypi.python.org/pypi/dsitributor
     :alt: PyPI downloads/month
 
-.. image:: https://travis-ci.org/m-messiah/distributor.svg?branch=master
+.. image:: https://travis-ci.org/m-messiah/distributor.svg?branch=master&style=flat-square
     :target: https://travis-ci.org/m-messiah/distributor
 
-.. image:: https://readthedocs.org/projects/distributor/badge/?version=latest
+.. image:: https://readthedocs.org/projects/distributor/badge/?version=latest&style=flat-square
     :target: http://distributor.readthedocs.org/ru/latest/?badge=latest
     :alt: Documentation Status
     
