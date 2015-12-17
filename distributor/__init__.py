@@ -853,7 +853,6 @@ def create_html(argv):
             logging.error("Can't create directory %s" % output_dir)
             exit(1)
     try:
-        1/0
         distrib = Distributor(temp_dir, args.settings)
         for cat in sorted(distrib.services.keys()):
             cat_html = distrib.write(cat)
