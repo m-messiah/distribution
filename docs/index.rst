@@ -13,8 +13,12 @@
     :target: https://pypi.python.org/pypi/dsitributor
     :alt: PyPI downloads/month
 
-.. image:: https://travis-ci.org/m-messiah/distributor.svg?branch=master&style=flat-square
+.. image:: https://img.shields.io/travis/m-messiah/distributor.svg?style=flat-square
     :target: https://travis-ci.org/m-messiah/distributor
+
+.. image:: https://readthedocs.org/projects/distributor/badge/?version=latest&style=flat-square
+    :target: http://distributor.readthedocs.org/ru/latest/?badge=latest
+    :alt: Documentation Status
 
 
 Когда у вас много серверов-фронтов, попытка уследить какие адреса и приложения слушаются на каком из них становится большой головнй болью, в особенности, если необходимо часто перемещать различные приложения между разными группами балансировщиков.
