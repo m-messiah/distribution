@@ -10,7 +10,7 @@
     :alt: PyPI latest version
 
 .. image:: https://img.shields.io/pypi/dm/distributor.svg?style=flat-square
-    :target: https://pypi.python.org/pypi/dsitributor
+    :target: https://pypi.python.org/pypi/distributor
     :alt: PyPI downloads/month
 
 .. image:: https://img.shields.io/travis/m-messiah/distributor.svg?style=flat-square
