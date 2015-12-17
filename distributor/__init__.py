@@ -67,7 +67,7 @@ class NginxParser(object):
             Group(ZeroOrMore(assignment | block | comment.suppress())) +
             right_bracket)
 
-        def commentHandler(t):
+        def comment_handler(t):
             result = []
 
             if "promo" in t[0]:
@@ -76,22 +76,23 @@ class NginxParser(object):
                 try:
                     email = t[0].split("author: ")[1].strip()
                     result.append(email)
-                except Exception as e:
+                except Exception:
                     result.append(t[0])
             return result
 
-        comment.setParseAction(commentHandler)
+        comment.setParseAction(comment_handler)
 
         self.script = OneOrMore(assignment | block | comment.suppress())
 
     def parse(self, s):
-        def toDict(o):
+        def to_dict(o):
             d = defaultdict(list)
             for i in o:
                 try:
-                    d[i[0] if isinstance(i[0], (str, int))
-                      else " ".join(i[0])].append(
-                        i[1] if isinstance(i[1], (str, int)) else toDict(i[1]))
+                    d[i[0].strip() if isinstance(i[0], (str, int))
+                      else " ".join(i[0]).strip()].append(
+                        i[1].strip() if isinstance(i[1], (str, int))
+                        else to_dict(i[1]))
                 except:
                     continue
                 if 'promo' in i:
@@ -105,7 +106,7 @@ class NginxParser(object):
             if len(t) and t[0] in [['http'], ['stream']]:
                 for tt in t[1]:
                     if tt[0] == ["server"]:
-                        servers[t[0][0]].append(toDict(tt[1]))
+                        servers[t[0][0]].append(to_dict(tt[1]))
                     if tt[0] == 'log_format':
                         servers[tt[0]][tt[1].strip()] = tt[2].strip()
 
@@ -388,7 +389,7 @@ class Distributor(object):
                                 "http", "ldap", "sms"]:
                     if pattern in listener[0]:
                         cat = pattern
-                        fl = False
+                        # fl = False
                         break
 
             self.services[cat][listener[0]][server].add(listener[1])

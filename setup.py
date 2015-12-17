@@ -20,6 +20,7 @@ setup(
         "dnspython%s" % (3 if version_info[0] == 3 else ""),
         "requests"
     ],
+    test_suite="tests",
     keywords='haproxy nginx bind nic.ru',
     classifiers=[
         'Development Status :: 5 - Production/Stable',
