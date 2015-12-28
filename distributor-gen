@@ -1,9 +1,75 @@
 #!/usr/bin/env python
 # coding=utf-8
-from distributor import create_html
-import sys
+import logging
+from shutil import rmtree
+from tempfile import mkdtemp
+from argparse import ArgumentParser
+from errno import ENOENT, EEXIST
+from os import makedirs
+from os.path import isdir, join as pjoin
+
+from distributor import Distributor
+
 __author__ = 'm_messiah'
 
 
 if __name__ == '__main__':
-    create_html(sys.argv[1:])
+    parser = ArgumentParser(
+        prog="distributor-gen",
+        description="Distributor: "
+                    "Nginx, HAproxy and bind configs analyzer and visualizer",
+    )
+    parser.add_argument("-c", "--config", required=True, metavar="config.ini",
+                        dest="settings",
+                        help="Path to config.ini file")
+
+    parser.add_argument("-o", "--output",
+                        help="Output directory for html files (default=`pwd`)",
+                        default=".")
+
+    parser.add_argument("-l", "--log", help="Logfile (default=console)",
+                        metavar="distributor.log")
+    args = parser.parse_args()
+
+    if args.log:
+        logging.basicConfig(format=u'%(asctime)s\t%(levelname)s\t%(message)s',
+                            filename=args.log)
+    else:
+        logging.basicConfig(format=u'%(asctime)s\t%(levelname)s\t%(message)s')
+
+    temp_dir = mkdtemp()
+    output_dir = pjoin(args.output, "categories")
+    try:
+        makedirs(output_dir)
+    except OSError as exc:
+        if exc.errno == EEXIST and isdir(output_dir):
+            pass
+        else:
+            logging.error("Can't create directory %s" % output_dir)
+            exit(1)
+    try:
+        distributor = Distributor(temp_dir, args.settings)
+        distributor.fetch()
+        distributor.generate()
+        for cat in distributor.get_cats():
+            cat_html = distributor.write(cat)
+
+            try:
+                open(pjoin(output_dir, cat + ".html"), "w").write(cat_html)
+            except UnicodeEncodeError:
+                open(pjoin(output_dir, cat + ".html"),
+                     "w").write(cat_html.encode("utf8"))
+
+        open(pjoin(output_dir, "api.json"), "w").write(distributor.api())
+        open(pjoin(args.output, "index.html"), "w").write(distributor.index())
+
+    except Exception as e:
+        logging.error("Exception while creating html: %s" % e)
+        exit(1)
+    finally:
+        try:
+            # print(temp_dir)
+            rmtree(temp_dir)
+        except OSError as exc:
+            if exc.errno != ENOENT:
+                raise

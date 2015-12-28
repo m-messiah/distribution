@@ -9,7 +9,8 @@ __author__ = 'm_messiah'
 class TestNginxParser(TestCase):
     def setUp(self):
         self.conf = open(
-            join(dirname(realpath(__file__)), "nginx.conf")
+            join(dirname(realpath(__file__)), "configs",
+                 "nginx.test_server.all")
         ).read()
         self.np = NginxParser()
 
@@ -58,4 +59,4 @@ class TestNginxParser(TestCase):
 
         self.assertEqual(2, len(self.servers['log_format']))
         self.assertSetEqual({'spdy_long', 'long'},
-                             set(self.servers['log_format'].keys()))
+                            set(self.servers['log_format'].keys()))

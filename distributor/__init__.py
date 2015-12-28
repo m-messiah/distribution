@@ -1,15 +1,22 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
-import logging
-from pyparsing import (Literal, White, Word, alphanums, CharsNotIn,
-                       Optional, Forward, Group, ZeroOrMore, OneOrMore,
-                       QuotedString, restOfLine)
-
 try:
     import urllib3.contrib.pyopenssl
     urllib3.contrib.pyopenssl.inject_into_urllib3()
 except ImportError:
     pass
+try:
+    from ConfigParser import (SafeConfigParser as ConfigParser,
+                              Error as parseError)
+except ImportError:
+    from configparser import ConfigParser, Error as parseError
+
+import logging
+
+from pyparsing import (Literal, White, Word, alphanums, CharsNotIn,
+                       Optional, Forward, Group, ZeroOrMore, OneOrMore,
+                       QuotedString, restOfLine)
+
 from datetime import datetime
 from dns import query, name as dns_name
 import dns.message
@@ -17,23 +24,15 @@ import dns.resolver
 import dns.rdatatype
 import dns.tsig
 import dns.tsigkeyring
-import errno
 from requests import Session, get as rget
 from requests.exceptions import SSLError
-import tempfile
-import shutil
-from os import listdir, makedirs
-from os.path import basename, splitext, dirname, isdir, join as pjoin
+from os import listdir
+from os.path import basename, splitext, dirname, join as pjoin
 from re import match, compile, DOTALL, MULTILINE, findall, M as REM
 import json
 from collections import defaultdict
 from jinja2 import Environment, PackageLoader, TemplateNotFound, Template
-from argparse import ArgumentParser
-try:
-    from ConfigParser import (SafeConfigParser as ConfigParser,
-                              Error as parseError)
-except ImportError:
-    from configparser import ConfigParser, Error as parseError
+
 
 __all__ = ['Distributor', 'create_html']
 
@@ -118,7 +117,7 @@ class Distributor(object):
         self.services = defaultdict(
             lambda: defaultdict(
                 lambda: defaultdict(set)))
-        self.api = dict()
+        self._api = dict()
         self.changed = []
         self.authors = defaultdict(set)
         self.re_haproxy = compile(
@@ -216,9 +215,6 @@ class Distributor(object):
         except parseError as e:
             logging.error("Bad config file: %s" % e)
             exit(1)
-        self.get_configs()
-        self.generate()
-        self.beautify()
 
     def index(self):
         last_sync = datetime.now().strftime("%d %B %H:%M %A")
@@ -228,8 +224,15 @@ class Distributor(object):
             zones = []
         return self.tpl.get_template("index.html").render(
             last_sync=last_sync,
+            categories=self.get_cats(),
             bind_zones=zones
         )
+
+    def get_cats(self):
+        return sorted(self.services.keys())
+
+    def api(self):
+        return json.dumps(self._api)
 
     def generate(self):
         for conf in listdir(self.configs):
@@ -281,15 +284,13 @@ class Distributor(object):
         except parseError:
             pass
 
-        if 'web' not in self.api:
-            self.api['web'] = {'servers': {}, 'log_format': {}}
+        if 'web' not in self._api:
+            self._api['web'] = {'servers': {}, 'log_format': {}}
 
-        self.api['web']['log_format'].update(servers['log_format'])
+        self._api['web']['log_format'].update(servers['log_format'])
 
         # Parse http section
         for server in servers["http"]:
-            if "location / " not in server:
-                continue
             cat = "promo" if "promo" in server and server['promo'] else "web"
             if "author" in server and server['author']:
                 author = server['author']
@@ -329,7 +330,7 @@ class Distributor(object):
                 self.authors[url].add(author)
                 self.services[cat][url][server_name].update(listeners)
 
-                self.api['web']['servers'][url] = {
+                self._api['web']['servers'][url] = {
                     'author': author,
                     'log': log_path,
                     'log_format': log_format
@@ -393,17 +394,6 @@ class Distributor(object):
                         break
 
             self.services[cat][listener[0]][server].add(listener[1])
-
-    def beautify(self):
-        for cat in self.services:
-            for service in self.services[cat].keys():
-                for server_name in list(self.services[cat][service]):
-                    if not self.services[cat][service][server_name]:
-                        del self.services[cat][service][server_name]
-                    else:
-                        self.services[cat][service][server_name] = sorted(
-                            self.services[cat][service][server_name]
-                        )
 
     def write(self, cat):
         response = [
@@ -560,15 +550,19 @@ class Distributor(object):
                     response.append(u"<td class=\"text-center\">")
 
                 if "NIC" in cat and "NS" in server:
-                    for ip, stat in self.services[cat][service][server]:
-                        response.append(u"%s %s</br>" %
-                                        (ip,
-                                         self.icons['DELEGATE']
-                                         if stat else self.icons['NO_URL']))
+                    for ip, stat in sorted(
+                            self.services[cat][service][server]):
+                        response.append(
+                            u"%s %s</br>" % (
+                                ip,
+                                self.icons['DELEGATE'] if stat
+                                else self.icons['NO_URL']
+                            )
+                        )
                         if not stat:
                             errors |= True
                 elif "TXT" not in server:
-                    for ip in self.services[cat][service][server]:
+                    for ip in sorted(self.services[cat][service][server]):
                         response.append(u"%s</br>" % ip)
                 if "NIC" in cat and "TXT" in server:
                     if u"Не делегирован" not in u"".join(
@@ -619,7 +613,7 @@ class Distributor(object):
 
         return template.render(table=u"".join(response), columns=columns)
 
-    def get_configs(self):
+    def fetch(self):
         # GitLab
         try:
             servers = self.settings.get("git", "servers").split(",")
@@ -814,68 +808,3 @@ class Distributor(object):
                     json.dump(csv, open(pjoin(self.configs, "nic"), "w"))
         except:
             pass
-
-
-def create_html(argv):
-    parser = ArgumentParser(
-        prog="distributor-gen",
-        description="Distributor: "
-                    "Nginx, HAproxy and bind configs analyzer and visualizer",
-    )
-    parser.add_argument("-c", "--config", required=True, metavar="config.ini",
-                        dest="settings",
-                        help="Path to config.ini file")
-
-    parser.add_argument("-o", "--output",
-                        help="Output directory for html files (default=`pwd`)",
-                        default=".")
-
-    parser.add_argument("-l", "--log", help="Logfile (default=console)",
-                        metavar="distributor.log")
-    args = parser.parse_args(argv)
-    
-    if args.log:
-        logging.basicConfig(
-            format=u'%(asctime)s\t%(levelname)s\t%(message)s',
-            filename=args.log
-        )
-    else:
-        logging.basicConfig(format=u'%(asctime)s\t%(levelname)s\t%(message)s')
-
-    temp_dir = tempfile.mkdtemp()
-    output_dir = pjoin(args.output, "categories")
-    try:
-        makedirs(output_dir)
-    except OSError as exc:
-        from errno import EEXIST
-        if exc.errno == EEXIST and isdir(output_dir):
-            pass
-        else:
-            logging.error("Can't create directory %s" % output_dir)
-            exit(1)
-    try:
-        distrib = Distributor(temp_dir, args.settings)
-        for cat in sorted(distrib.services.keys()):
-            cat_html = distrib.write(cat)
-
-            try:
-                open(pjoin(output_dir, cat + ".html"),
-                     "w").write(cat_html)
-            except UnicodeEncodeError:
-                open(pjoin(output_dir, cat + ".html"),
-                     "w").write(cat_html.encode("utf8"))
-
-        json.dump(distrib.api, open(pjoin(output_dir, "api.json"), "w"))
-
-        open(pjoin(args.output, "index.html"), "w").write(distrib.index())
-
-    except Exception as e:
-        logging.error("Exception while creating html: %s" % e)
-        exit(1)
-    finally:
-        try:
-            # print(temp_dir)
-            shutil.rmtree(temp_dir)
-        except OSError as exc:
-            if exc.errno != errno.ENOENT:
-                raise

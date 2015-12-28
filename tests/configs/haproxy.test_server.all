@@ -1,0 +1,11 @@
+listen https.example.org 3.3.3.3:443
+    mode tcp
+    option tcpka
+    balance source
+    server example.org 192.168.0.1:443 inter 5s downinter 3m
+
+listen ssh.example.org 3.3.3.3:22
+    mode tcp
+    option tcpka
+    balance source
+    server ssh.example.org 192.168.0.1:22 inter 5s downinter 3m

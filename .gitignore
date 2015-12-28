@@ -1,4 +1,4 @@
-*.pyc
+*.py[co]
 .idea/
 /docs/_build*
 /build/
@@ -7,3 +7,4 @@
 /dist
 /distributor.egg-info
 /MANIFEST
+__pycache__/

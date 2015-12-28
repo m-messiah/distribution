@@ -25,70 +25,30 @@
         <small class="meta">{{ last_sync }}</small></a>
         <a href="#" data-activates="mobile-navbar" class="button-collapse"><i class="material-icons">menu</i></a>
         <ul class="right hide-on-med-and-down">
-            <li class="active"><a class="waves-effect" href="#" id="web">Web</a></li>
-            <li><a class="waves-effect" href="#" id="promo">Promo</a></li>
-            <li><a class="waves-effect" href="#" id="stream">Stream</a></li>
+            {% if "web" in categories %}<li class="active"><a class="waves-effect" href="#" id="web">Web</a></li>{% endif %}
+            {% if "promo" in categories %}<li><a class="waves-effect" href="#" id="promo">Promo</a></li>{% endif %}
+            {% if "stream" in categories %}<li><a class="waves-effect" href="#" id="stream">Stream</a></li>{% endif %}
             <li><a id="haproxy" class="dropdown-button" href="#" data-activates="haproxy_dropdown" data-constrainwidth="false">HA Proxy</a></li>
-            <li><a class="waves-effect" href="#" id="NIC">NIC</a></li>
+            {% if "NIC" in categories %}<li><a class="waves-effect" href="#" id="NIC">NIC</a></li>{% endif %}
             <li><a id="bind" class="dropdown-button" href="#" data-activates="bind_dropdown" data-constrainwidth="false">Bind</a></li>
         </ul>
       </div>
     </nav>
     <ul id="haproxy_dropdown" class="dropdown-content">
-        <li><a href="#" id="http">HTTP</a></li>
-        <li><a href="#" id="ldap">LDAP</a></li>
-        <li><a href="#" id="mail">Mail</a></li>
-        <li><a href="#" id="rdp">RDP</a></li>
-        <li><a href="#" id="sql">SQL</a></li>
-        <li><a href="#" id="ssh">SSH</a></li>
+        {% if "http" in categories %}<li><a href="#" id="http">HTTP</a></li>{% endif %}
+        {% if "ldap" in categories %}<li><a href="#" id="ldap">LDAP</a></li>{% endif %}
+        {% if "mail" in categories %}<li><a href="#" id="mail">Mail</a></li>{% endif %}
+        {% if "rdp" in categories %}<li><a href="#" id="rdp">RDP</a></li>{% endif %}
+        {% if "sql" in categories %}<li><a href="#" id="sql">SQL</a></li>{% endif %}
+        {% if "ssh" in categories %}<li><a href="#" id="ssh">SSH</a></li>{% endif %}
         <li class="divider"></li>
-        <li><a href="#" id="other">Other</a></li>
+        {% if "other" in categories %}<li><a href="#" id="other">Other</a></li>{% endif %}
     </ul>
-    <!-- bind dropdown -->
+
     <ul id="bind_dropdown" class="dropdown-content">
     {% for zone in bind_zones %}
         <li><a href="#" id="DNS_{{ zone | replace('.', '_') }}">{{ zone }}</a></li>
     {% endfor %}
-    </ul>
-
-    <ul class="side-nav" id="mobile-navbar">
-        <li class="active"><a class="waves-effect" href="#" id="web">Web</a></li>
-        <li><a class="waves-effect" href="#" id="promo">Promo</a></li>
-        <li><a class="waves-effect" href="#" id="stream">Stream</a></li>
-        <li class="no-padding" id="haproxy_side">
-        <ul class="collapsible collapsible-accordion">
-          <li>
-            <a class="collapsible-header">HA Proxy</a>
-            <div class="collapsible-body">
-              <ul>
-                <li><a href="#" id="http">HTTP</a></li>
-                <li><a href="#" id="ldap">LDAP</a></li>
-                <li><a href="#" id="mail">Mail</a></li>
-                <li><a href="#" id="rdp">RDP</a></li>
-                <li><a href="#" id="sql">SQL</a></li>
-                <li><a href="#" id="ssh">SSH</a></li>
-                <li class="divider"></li>
-                <li><a href="#" id="other">Other</a></li>
-              </ul>
-            </div>
-          </li>
-        </ul>
-        </li>
-        <li><a class="waves-effect" href="#" id="NIC">NIC</a></li>
-        <li class="no-padding" id="bind_side">
-            <ul class="collapsible collapsible-accordion">
-              <li>
-                <a class="collapsible-header">Bind</a>
-                <div class="collapsible-body">
-                  <ul>
-                  {% for zone in bind_zones %}
-                      <li><a href="#" id="DNS_{{ zone | replace('.', '_') }}">{{ zone }}</a></li>
-                  {% endfor %}
-                  </ul>
-                </div>
-              </li>
-            </ul>
-        </li>
     </ul>
 
     <div class="row">
