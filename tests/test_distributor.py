@@ -51,15 +51,16 @@ class TestDistributor(TestCase):
     def test_parse_haproxy(self):
         self.D.parse_haproxy(join(self.pwd, "configs",
                                   "haproxy.test_server.all"))
-        self.assertListEqual(['http', 'ssh'], sorted(self.D.services.keys()))
-        self.assertEqual('https.example.org',
-                         self.D.services['http'].keys()[0])
+        self.assertSetEqual({'http', 'ssh'}, set(self.D.services.keys()))
+        self.assertSetEqual({'https.example.org'},
+                            set(self.D.services['http'].keys()))
         self.assertEqual(
             {'3.3.3.3:443'},
             self.D.services['http']['https.example.org']['test_server']
         )
 
-        self.assertEqual('ssh.example.org', self.D.services['ssh'].keys()[0])
+        self.assertSetEqual({'ssh.example.org'},
+                            set(self.D.services['ssh'].keys()))
         self.assertEqual(
             {'3.3.3.3:22'},
             self.D.services['ssh']['ssh.example.org']['test_server']
