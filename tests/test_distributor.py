@@ -10,7 +10,7 @@ class TestDistributor(TestCase):
     def setUp(self):
         self.pwd = dirname(realpath(__file__))
         self.D = Distributor(self.pwd,
-                             join(self.pwd, "configs", "config_t.ini"))
+                             join(self.pwd, "config_t.ini"))
 
     def test_parse_nginx(self):
         self.D.parse_nginx(join(self.pwd, "configs", "nginx.test_server.all"))
@@ -65,3 +65,13 @@ class TestDistributor(TestCase):
             {'3.3.3.3:22'},
             self.D.services['ssh']['ssh.example.org']['test_server']
         )
+
+    def test_index(self):
+        index = self.D.index()
+        self.assertIn("<html", index)
+        self.assertNotIn("{%", index)
+        self.assertIn("example.com", index)
+        self.assertIn("example.net", index)
+
+    def test_get_cats(self):
+        self.assertListEqual(sorted(self.D.services.keys()), self.D.get_cats())

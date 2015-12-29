@@ -112,6 +112,64 @@ class NginxParser(object):
         return servers
 
 
+def check_dns(domain, ns):
+    ns_s = list(filter(len, map(lambda _s: _s.strip(),
+                                ns.replace('"', '').split(';'))))
+    if len(ns_s) < 1:
+        return {}
+    mess = dns.message.make_query(dns_name.from_text(domain),
+                                  dns.rdatatype.SOA)
+    result = {}
+    for ns in ns_s:
+        try:
+            name_s = dns_name.from_text(ns.split()[0]).to_text()
+            answer = query.tcp(mess, name_s, timeout=2)
+            if len(answer.authority):
+                result[ns] = True
+            else:
+                rr = answer.answer[0][0]
+                if rr.rdtype == dns.rdatatype.SOA:
+                    result[ns] = True
+                else:
+                    result[ns] = False
+        except:
+            result[ns] = False
+    return result
+
+
+def check_txt(domain, status):
+    spf, dmarc = 1, 1
+    if u"Не делегирован" in status:
+        return spf, dmarc
+    try:
+        mess = dns.resolver.query(
+            dns_name.from_text(domain),
+            dns.rdatatype.TXT)
+    except:
+        spf = 1
+    else:
+        txts = [txt for rdata in mess for txt in rdata.strings]
+        spfs = filter(lambda i: "v=spf1" in i, txts)
+        if not spfs:
+            spf = 1
+        else:
+            if "+all" in " ".join(spfs):
+                spf = 2
+            else:
+                spf = 0
+    try:
+        mess = dns.resolver.query(
+            dns_name.from_text("_dmarc." + domain),
+            dns.rdatatype.TXT)
+    except:
+        return spf, dmarc
+    else:
+        txts = [txt for rdata in mess for txt in rdata.strings]
+
+        dmarc = 0 if filter(lambda i: "v=DMARC1" in i, txts) else 1
+        return spf, dmarc
+
+
 class Distributor(object):
     def __init__(self, configs_dir, settings):
         self.services = defaultdict(
@@ -615,88 +673,64 @@ class Distributor(object):
 
     def fetch(self):
         # GitLab
-        try:
-            servers = self.settings.get("git", "servers").split(",")
-            auth = {'PRIVATE-TOKEN': self.settings.get("git", "token")}
-            url = "https://%s/api/v3/projects" % self.settings.get("git",
-                                                                   "host")
+        if self.settings.has_section('git'):
+            self.fetch_git()
 
-            for server in servers:
-                try:
-                    id_proj = rget(
-                        "%s/%s%%2F%s"
-                        % (url, self.settings.get("git", "group"), server),
-                        headers=auth
-                    ).json()[u'id']
-                except:
-                    logging.warning("Repository %s does not exists" % server)
-                else:
-                    sha = rget(
-                        "%s/%s/repository/commits" % (url, id_proj),
-                        headers=auth).json()[0][u'id']
-                    for filepath in ['usr/local/etc/nginx/nginx.conf',
-                                     'usr/local/etc/haproxy/haproxy.cfg',
-                                     'etc/nginx/nginx.conf',
-                                     'etc/haproxy/haproxy.cfg',
-                                     'nginx.conf']:
-                        try:
-                            params = {'filepath': filepath}
-                            main_file = rget(
-                                "%s/%s/repository/blobs/%s"
-                                % (url, id_proj, sha),
-                                params=params, headers=auth)
-                            if main_file.status_code != 200:
-                                continue
-                            with open(
-                                    pjoin(
-                                        self.configs,
-                                        "%s.%s.all"
-                                        % (splitext(basename(filepath))[0],
-                                           server)),
-                                    "w") as config:
-                                main_file = main_file.text
-
-                                for incl in findall(
-                                        r"(?:^i|^[ \t]+i)nclude (.+?);$",
-                                        main_file, REM):
-                                    try:
-                                        params = {
-                                            'filepath': pjoin(
-                                                dirname(filepath), incl
-                                            )
-                                        }
-                                        include_file = rget(
-                                            "%s/%s/repository/blobs/%s"
-                                            % (url, id_proj, sha),
-                                            params=params,
-                                            headers=auth
-                                        )
-                                        if include_file.status_code == 200:
-                                            main_file = main_file.replace(
-                                                "include " + incl + ";",
-                                                include_file.text)
-                                    except:
-                                        pass
-                                config.write(main_file)
-                        except:
-                            pass
-        except:
-            pass
         # DNS
+        if self.settings.has_section('dns'):
+            self.fetch_dns()
+        # NIC.ru
+        if self.settings.has_section('nic'):
+            self.fetch_nic()
+
+    def fetch_nic(self):
+        try:
+            s = Session()
+            login = s.post(
+                "https://www.nic.ru/login/manager/",
+                data={
+                    'login': self.settings.get("nic", "login"),
+                    'client_type': 'NIC-D',
+                    'password': self.settings.get("nic", "password"),
+                    'password_type': 'adm'
+                }
+            )
+            if login.status_code == 200:
+                csv = s.get("https://www.nic.ru/manager/my_domains.cgi"
+                            "?step=srv.my_domains&view.format=csv",
+                            verify=False)
+                if csv.status_code == 200:
+                    csv = csv.text
+                    csv = list(map(
+                        lambda info: {'domain': info[0],
+                                      'ns': check_dns(info[1], info[2]),
+                                      'txt': check_txt(info[1], info[5]),
+                                      'status': info[5],
+                                      'sost': info[6],
+                                      'till': info[7]},
+                        map(lambda l: l.split(","),
+                            filter(len, csv.split("\n")[2:]))
+                    ))
+                    json.dump(csv, open(pjoin(self.configs, "nic"), "w"))
+        except:
+            logging.error("can't fetch from NIC.ru by login: %s" %
+                          self.settings.get('nic', 'login'))
+
+    def fetch_dns(self):
         try:
             name_server = self.settings.get("dns", "server")
             keyring = dns.tsigkeyring.from_text(
-                {self.settings.get("dns", "tsig_name"):
-                 self.settings.get("dns", "tsig_key")}
+                    {self.settings.get("dns", "tsig_name"):
+                     self.settings.get("dns", "tsig_key")}
             )
             for domain in self.settings.get("dns", "domains").split(","):
                 try:
                     responses = query.xfr(
-                        name_server,
-                        dns_name.from_text(domain),
-                        keyring=keyring,
-                        keyname=self.settings.get("dns", "tsig_name"),
-                        keyalgorithm=dns.tsig.HMAC_SHA512
+                            name_server,
+                            dns_name.from_text(domain),
+                            keyring=keyring,
+                            keyname=self.settings.get("dns", "tsig_name"),
+                            keyalgorithm=dns.tsig.HMAC_SHA512
                     )
                     with open(pjoin(self.configs, "dns." + domain),
                               "w") as config:
@@ -706,105 +740,75 @@ class Distributor(object):
                 except:
                     pass
         except:
-            pass
+            logging.error("can't fetch from DNS: %s" %
+                          self.settings.get('dns', 'server'))
 
-        # NIC.ru
+    def fetch_git(self):
         try:
-            s = Session()
-            login = s.post(
-                "https://www.nic.ru/login/manager/",
-                data={
-                    'login': self.settings.get("nic", "login"),
-                    'client_type': 'NIC-D',
-                    'password': self.settings.get("nic", "password"),
-                    'password_type': 'adm'}
-            )
-            if login.status_code == 200:
-                csv = s.get("https://www.nic.ru/manager/my_domains.cgi"
-                            "?step=srv.my_domains&view.format=csv",
-                            verify=False)
-                if csv.status_code == 200:
-                    csv = csv.text
-
-                    def check_dns(_domain, ns):
-                        ns_s = list(
-                            filter(len, map(lambda _s: _s.strip(),
-                                            ns.replace('"', '').split(';')))
-                        )
-                        if len(ns_s) < 1:
-                            return {}
-                        mess = dns.message.make_query(
-                            dns_name.from_text(_domain),
-                            dns.rdatatype.SOA)
-                        result = {}
-                        for ns in ns_s:
-                            try:
-                                name_s = dns_name.from_text(
-                                        ns.split()[0]
-                                ).to_text()
-                                answer = query.tcp(mess, name_s, timeout=2)
-                                if len(answer.authority):
-                                    result[ns] = True
-                                else:
-                                    rr = answer.answer[0][0]
-                                    if rr.rdtype == dns.rdatatype.SOA:
-                                        result[ns] = True
-                                    else:
-                                        result[ns] = False
-                            except:
-                                result[ns] = False
-                        return result
-
-                    def check_txt(_domain, status):
-                        spf, dmarc = 1, 1
-                        if u"Не делегирован" in status:
-                            return spf, dmarc
+            servers = self.settings.get("git", "servers").split(",")
+            auth = {'PRIVATE-TOKEN': self.settings.get("git", "token")}
+            url = "https://%s/api/v3/projects" % self.settings.get("git",
+                                                                   "host")
+            for server in servers:
+                try:
+                    id_proj = rget(
+                            "%s/%s%%2F%s"
+                            % (url, self.settings.get("git", "group"), server),
+                            headers=auth
+                    ).json()[u'id']
+                except:
+                    logging.warning("Repository %s does not exists" % server)
+                else:
+                    sha = rget(
+                            "%s/%s/repository/commits" % (url, id_proj),
+                            headers=auth).json()[0][u'id']
+                    for filepath in ['usr/local/etc/nginx/nginx.conf',
+                                     'usr/local/etc/haproxy/haproxy.cfg',
+                                     'etc/nginx/nginx.conf',
+                                     'etc/haproxy/haproxy.cfg',
+                                     'nginx.conf']:
                         try:
-                            mess = dns.resolver.query(
-                                dns_name.from_text(_domain),
-                                dns.rdatatype.TXT)
+                            params = {'filepath': filepath}
+                            main_file = rget(
+                                    "%s/%s/repository/blobs/%s"
+                                    % (url, id_proj, sha),
+                                    params=params, headers=auth)
+                            if main_file.status_code != 200:
+                                continue
+                            with open(
+                                    pjoin(
+                                            self.configs,
+                                                    "%s.%s.all"
+                                                    % (
+                                            splitext(basename(filepath))[0],
+                                            server)),
+                                    "w") as config:
+                                main_file = main_file.text
+
+                                for incl in findall(
+                                        r"(?:^i|^[ \t]+i)nclude (.+?);$",
+                                        main_file, REM):
+                                    try:
+                                        params = {
+                                            'filepath': pjoin(
+                                                    dirname(filepath), incl
+                                            )
+                                        }
+                                        include_file = rget(
+                                                "%s/%s/repository/blobs/%s"
+                                                % (url, id_proj, sha),
+                                                params=params,
+                                                headers=auth
+                                        )
+                                        if include_file.status_code == 200:
+                                            main_file = main_file.replace(
+                                                    "include " + incl + ";",
+                                                    include_file.text)
+                                    except:
+                                        pass
+                                config.write(main_file)
                         except:
-                            spf = 1
-                        else:
-                            txts = [txt for rdata in mess
-                                    for txt in rdata.strings]
-
-                            spfs = filter(lambda i: "v=spf1" in i, txts)
-                            if not spfs:
-                                spf = 1
-                            else:
-                                if "+all" in " ".join(spfs):
-                                    spf = 2
-                                else:
-                                    spf = 0
-                        try:
-                            mess = dns.resolver.query(
-                                dns_name.from_text("_dmarc." + _domain),
-                                dns.rdatatype.TXT)
-                        except:
-                            return spf, dmarc
-                        else:
-                            txts = [txt for rdata in mess
-                                    for txt in rdata.strings]
-
-                            if filter(lambda i: "v=DMARC1" in i, txts):
-                                dmarc = 0
-                            else:
-                                dmarc = 1
-                            return spf, dmarc
-
-                    def get_dns_info(info):
-                        return {
-                            'domain': info[0],
-                            'ns': check_dns(info[1], info[2]),
-                            'txt': check_txt(info[1], info[5]),
-                            'status': info[5],
-                            'sost': info[6],
-                            'till': info[7]
-                        }
-
-                    csv = list(map(lambda l: get_dns_info(l.split(",")),
-                                   filter(len, csv.split("\n")[2:])))
-                    json.dump(csv, open(pjoin(self.configs, "nic"), "w"))
+                            pass
         except:
-            pass
+            logging.error("can't fetch from GitLab: %s" %
+                          self.settings.get('git', 'host'))
