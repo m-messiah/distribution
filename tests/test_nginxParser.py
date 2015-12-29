@@ -32,8 +32,10 @@ class TestNginxParser(TestCase):
         self.assertListEqual(['1.1.1.1:80', '2.2.2.2:80', '2.2.2.2:443 ssl'],
                              [s['listen'][0] for s in self.servers['http']])
         self.assertIn(True, [s['promo'] for s in self.servers['http']])
-        self.assertIn("info@example.net",
-                      [s['author'] for s in self.servers['http']])
+        server_author = {s['server_name'][0]: s['author']
+                         for s in self.servers['http']}
+        self.assertEqual("info@example.net", server_author['example.net'])
+        self.assertEqual([], server_author['example.com'])
 
     def test_parse_stream(self):
         try:

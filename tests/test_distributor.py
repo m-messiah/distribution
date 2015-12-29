@@ -9,8 +9,12 @@ __author__ = 'm_messiah'
 class TestDistributor(TestCase):
     def setUp(self):
         self.pwd = dirname(realpath(__file__))
-        self.D = Distributor(self.pwd,
-                             join(self.pwd, "config_t.ini"))
+        self.D = Distributor(self.pwd, join(self.pwd, "config_t.ini"))
+
+    def test_config(self):
+        with self.assertRaises(SystemExit):
+            Distributor(self.pwd, join(self.pwd, "config_t_bad.ini"))
+
 
     def test_parse_nginx(self):
         self.D.parse_nginx(join(self.pwd, "configs", "nginx.test_server.all"))

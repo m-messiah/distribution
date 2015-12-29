@@ -269,7 +269,9 @@ class Distributor(object):
         self.configs = configs_dir
         try:
             self.settings = ConfigParser()
-            self.settings.read(settings)
+            if settings not in self.settings.read(settings):
+                logging.error("No such file %s or it is empty" % settings)
+                exit(1)
         except parseError as e:
             logging.error("Bad config file: %s" % e)
             exit(1)

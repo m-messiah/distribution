@@ -81,7 +81,7 @@ http {
 
     server {
         listen       1.1.1.1:80;
-        server_name  example.com; # promo
+        server_name  example.com; # promo author:
         error_log   /var/log/nginx/example.com.error_log alert;
         access_log  /var/log/nginx/example.com.access.log combined buffer=32k;
         location / {
