@@ -18,7 +18,8 @@ GitLab
     # Список серверов-названий проектов в git
     servers = eu-front1,eu-front2,us-front1,us-front2,int-front
     # Смерджит конфиги eu-front1 и eu-front2, отображая их как "eu"
-    same_host = \w\w\-front\d
+    # Отображает имя сервера на .group(1) - то, что в скобках
+    same_host = (\w\w\)-front\d
     # Если skipped в названии сервера, то к nginx не будут применяться проверки доступности. (например, если там локальные адреса)
     skipped = int
 
