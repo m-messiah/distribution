@@ -1,7 +1,7 @@
 *.py[co]
 .idea/
-/docs/_build/
 /docs/build/
+/docs/_build_html/
 /build/
 /web/
 /config.ini
