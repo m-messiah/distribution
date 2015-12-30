@@ -2,15 +2,19 @@ from setuptools import setup
 from os.path import join, dirname
 from sys import version_info
 
+__author__ = u"m_messiah"
+__author_email__ = u"m.muzafarov@gmail.com"
+__version__ = u'2.3'
+
 setup(
     name='distributor',
-    version='2.3',
+    version=__version__,
     packages=['distributor'],
     include_package_data=True,
     url='https://github.com/m-messiah/distributor',
     license='MIT',
-    author='m_messiah',
-    author_email='m.muzafarov@gmail.com',
+    author=__author__,
+    author_email=__author_email__,
     description='Nginx, Haproxy configs and DNS analyzer.',
     long_description=open(join(dirname(__file__), 'README.rst')).read(),
     scripts=["distributor-gen"],
