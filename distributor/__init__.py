@@ -11,27 +11,27 @@ try:
 except ImportError:
     from configparser import ConfigParser, Error as parseError
 
+import json
 import logging
+from collections import defaultdict
+from datetime import datetime
+from os import listdir
+from os.path import basename, splitext, dirname, join as pjoin
+from re import compile, DOTALL, MULTILINE, findall, M as REM
 
+import dns.message
+import dns.rdatatype
+import dns.resolver
+import dns.tsig
+import dns.tsigkeyring
+from dns import query, name as dns_name
+from jinja2 import Environment, PackageLoader
+from jinja2.exceptions import TemplateNotFound
 from pyparsing import (Literal, White, Word, alphanums, CharsNotIn,
                        Optional, Forward, Group, ZeroOrMore, OneOrMore,
                        QuotedString, restOfLine)
-
-from datetime import datetime
-from dns import query, name as dns_name
-import dns.message
-import dns.resolver
-import dns.rdatatype
-import dns.tsig
-import dns.tsigkeyring
 from requests import Session, get as rget
 from requests.exceptions import SSLError
-from os import listdir
-from os.path import basename, splitext, dirname, join as pjoin
-from re import match, compile, DOTALL, MULTILINE, findall, M as REM
-import json
-from collections import defaultdict
-from jinja2 import Environment, PackageLoader, TemplateNotFound, Template
 
 
 __all__ = ['Distributor', 'create_html']
@@ -183,87 +183,6 @@ class Distributor(object):
             '(?:(?:\s+?bind\s+?)?'
             '((?:\d{1,3}\.){3}\d{1,3}:\d+)\s+?)+',
             DOTALL | MULTILINE)
-        _icon = (" <i title=\"%(hint)s\" "
-                 "class=\"tiny material-icons %(color)s\">%(icon)s</i>")
-        self.icons = {
-            u'NO_ROBOTS': _icon % {
-                "color": "",
-                "icon": "android",
-                "hint": "no robots.txt"
-            },
-            u'BAD_ROBOTS': _icon % {
-                'color': "orange-text",
-                'icon': "android",
-                'hint': "bad robots.txt"
-            },
-            u'NO_FAVICON': _icon % {
-                "color": "",
-                "icon": "favorite_border",
-                "hint": "no favicon.ico"},
-            u'BAD_FAVICON': _icon % {
-                "color": "orange-text",
-                "icon": "favorite_border",
-                "hint": "favicon not ico"
-            },
-            u'ANONYMOUS': _icon % {
-                "color": "red-text text-lighten-1",
-                "icon": "person_add",
-                "hint": "no author"
-            },
-            u'REDIRECT': _icon % {
-                "color": "",
-                "icon": "arrow_forward",
-                "hint": "redirect detected"
-            },
-            u'BAD_HEADER': _icon % {
-                "color": "",
-                "icon": "announcement",
-                "hint": "X-Powered-by header"
-            },
-            u'NO_URL': _icon % {
-                "color": "red-text",
-                "icon": "clear",
-                "hint": "%s"
-            },
-            u'DELEGATE': _icon % {
-                "color": "green-text",
-                "icon": "done",
-                "hint": u"Делегирован"
-            },
-            u'DOTTED': _icon % {
-                "color": "orange-text",
-                "icon": "filter_center_focus",
-                "hint": ".domain"
-            },
-            u'INSECURE': _icon % {
-                "color": "red-text text-lighten-1",
-                "icon": "security",
-                "hint": "bad ssl"
-            },
-            u'NO_SITEMAP': _icon % {
-                "color": "",
-                "icon": "dashboard",
-                "hint": "no sitemap"
-            },
-            u'BAD_SITEMAP': _icon % {
-                "color": "orange-text",
-                "icon": "dashboard",
-                "hint": "sitemap not xml"
-            },
-            u'DOUBLE_HEADER': _icon % {
-                "color": "",
-                "icon": "filter_2",
-                "hint": "duplicate header with different info"
-            },
-            u'DOUBLE_HEADER_SAME': _icon % {
-                "color": "orange-text",
-                "icon": "filter_2",
-                "hint": "duplicate header with same info"
-            },
-            u'NO_H1': "&lt;h1&gt;",
-            u'NO_TITLE': "&lt;title&gt;",
-            u'NO_DESCRIPTION': "&lt;descr&gt;"
-        }
 
         self.tpl = Environment(loader=PackageLoader("distributor"))
         self.configs = configs_dir
@@ -275,6 +194,11 @@ class Distributor(object):
         except parseError as e:
             logging.error("Bad config file: %s" % e)
             exit(1)
+        try:
+            self.same_hosts = compile(self.settings.get("git", "same_host"))
+        except parseError:
+            # regexp for unavailable hostname (to be search() == None)
+            self.same_hosts = compile("\*")
 
     def index(self):
         last_sync = datetime.now().strftime("%d %B %H:%M %A")
@@ -339,9 +263,8 @@ class Distributor(object):
         servers = NginxParser().parse(open(conf).read())
         server_name = basename(conf).replace(".all", "").replace("nginx.", "")
         try:
-            if match(self.settings.get("git", "same_host"), server_name):
-                server_name = server_name[:2]
-        except parseError:
+            server_name = self.same_hosts.search(server_name).group(1)
+        except (AttributeError, IndexError):
             pass
 
         if 'web' not in self._api:
@@ -412,11 +335,11 @@ class Distributor(object):
         listeners = [(i[0].replace("cluster.", ""), i[1])
                      for i in self.re_haproxy.findall(open(conf).read())]
 
-        server = basename(conf).replace("haproxy.", "").replace(".all", "")
+        server_name = basename(conf).replace("haproxy.",
+                                             "").replace(".all", "")
         try:
-            if match(self.settings.get("git", "same_host"), server):
-                server = server[:2]
-        except parseError:
+            server_name = self.same_hosts.search(server_name).group(1)
+        except (AttributeError, IndexError):
             pass
 
         for listener in listeners:
@@ -453,34 +376,29 @@ class Distributor(object):
                         # fl = False
                         break
 
-            self.services[cat][listener[0]][server].add(listener[1])
+            self.services[cat][listener[0]][server_name].add(listener[1])
 
     def write(self, cat):
-        response = [
-            u'<table class="hoverable" id="%s-table">' % cat,
-            u'<thead><tr><th>Services</th>']
-
         servers = set()
         for service in self.services[cat].keys():
             for server_name in self.services[cat][service].keys():
                 try:
-                    if match(self.settings.get("git", "same_host"),
-                             server_name):
-                        server_name = server_name[:2]
-                except parseError:
+                    server_name = self.same_hosts.search(server_name).group(1)
+                except (AttributeError, IndexError):
                     pass
                 servers.add(server_name)
         servers = sorted(servers)
         columns = servers + ["author"]
-        for server in servers:
-            response.append(u"<th>%s</th>" % server)
-        if cat == "web" or cat == "promo" or cat == "stream":
-            response.append(u"<th>Author</th>")
-        response.append(u"</tr></thead>\n<tbody>")
         services1 = {0: [], 1: []}
         for service in self.services[cat].keys():
-            color = len(self.services[cat][service].keys())
-            services1[1 if color > 1 else 0].append((color, service))
+            c = (0 if len(self.services[cat][service].keys()) > 1 and
+                 "DNS" not in cat and "NIC" not in cat else 1)
+            services1[c].append(
+                (service, None if c < 1
+                 else servers.index(
+                    next(iter(self.services[cat][service].keys()))
+                 ))
+            )
 
         def skip_www(cs):
             # Use for sorting
@@ -491,17 +409,13 @@ class Distributor(object):
                 return s
 
         services = (
-            sorted([(i[1], i[0]) for i in services1[1]], key=skip_www) +
-            sorted([(i[1], i[0]) for i in services1[0]], key=skip_www)
+            sorted(services1[0], key=skip_www) +
+            sorted(services1[1], key=skip_www)
         )
-        for (service, color) in services:
+        result_services = []
+        for (service, zone) in services:
             errors = False
-            if color > 1 and "DNS" not in cat and "NIC" not in cat:
-                response.append(u"<tr class=\"red lighten-3\"><th>")
-            else:
-                server = list(self.services[cat][service].keys())[0]
-                response.append(u"<tr class=\"zone%s\"><th> "
-                                % servers.index(server))
+            result_service = {'zone': zone}
 
             clear_service = service
             dotted = False
@@ -510,8 +424,8 @@ class Distributor(object):
                 dotted = True
             if ":443" in clear_service:
                 clear_service = "https://" + clear_service.replace(":443", "")
-            response.append(clear_service)
-            response.append(self.icons['DOTTED'] if dotted else "")
+            result_service['service'] = clear_service
+            result_service['dotted'] = dotted
             skipped_cat = False
             try:
                 for candidate in self.settings.get("git",
@@ -532,27 +446,27 @@ class Distributor(object):
                     if cat == "promo":
                         r = rget("%s/favicon.ico" % url, timeout=5)
                         if r.status_code != 200:
-                            response.append(self.icons['NO_FAVICON'])
+                            result_service['no_fav'] = True
                         elif "image/x-icon" not in r.headers['content-type']:
-                            response.append(self.icons['BAD_FAVICON'])
+                            result_service['bad_fav'] = True
                         history += len(r.history)
                         r = rget("%s/robots.txt" % url, timeout=5)
                         if r.status_code != 200:
-                            response.append(self.icons['NO_ROBOTS'])
+                            result_service['no_robots'] = True
                         elif "text/plain" not in r.headers['content-type']:
-                            response.append(self.icons['BAD_ROBOTS'])
+                            result_service['bad_robots'] = True
                         history += len(r.history)
                         r = rget("%s/sitemap.xml" % url, timeout=5)
                         if r.status_code != 200:
-                            response.append(self.icons['NO_SITEMAP'])
+                            result_service['no_sitemap'] = True
                         elif "text/xml" not in r.headers['content-type']:
-                            response.append(self.icons['BAD_SITEMAP'])
+                            result_service['bad_sitemap'] = True
                         r = rget(url, timeout=5)
                         history += len(r.history)
                         if len(r.history):
-                            response.append(self.icons['REDIRECT'])
+                            result_service['redirect'] = True
                         if r.headers.get('x-powered-by'):
-                            response.append(self.icons['BAD_HEADER'])
+                            result_service['x_powered_by'] = True
                         for head_name, header in r.headers.items():
                             if "set-cookie" in head_name:
                                 continue
@@ -560,25 +474,23 @@ class Distributor(object):
                                 map(lambda s: s.strip(), header.split(","))
                             )
                             if len(h) > len(set(h)):
-                                response.append(
-                                    self.icons['DOUBLE_HEADER_SAME']
-                                )
+                                result_service['double_header_same'] = True
                                 break
 
                         if "<h1" not in r.text:
-                            response.append(self.icons['NO_H1'])
+                            result_service['no_h1'] = True
                         if "<title" not in r.text:
-                            response.append(self.icons['NO_TITLE'])
+                            result_service['no_title'] = True
                         if 'name="description"' not in r.text:
-                            response.append(self.icons['NO_DESCRIPTION'])
+                            result_service['no_description'] = True
 
                     else:
                         r = rget(url, timeout=5)
                         history += len(r.history)
                         if len(r.history):
-                            response.append(self.icons['REDIRECT'])
+                            result_service['redirect'] = True
                         if r.headers.get('x-powered-by'):
-                            response.append(self.icons['BAD_HEADER'])
+                            result_service['x_powered_by'] = True
                         for head_name, header in r.headers.items():
                             if "set-cookie" in head_name:
                                 continue
@@ -586,92 +498,64 @@ class Distributor(object):
                                 map(lambda s: s.strip(), header.split(","))
                             )
                             if len(h) > len(set(h)):
-                                response.append(
-                                    self.icons['DOUBLE_HEADER_SAME']
-                                )
+                                result_service['double_header_same'] = True
                                 break
 
                 except SSLError:
-                    response.append(self.icons['INSECURE'])
+                    result_service['insecure'] = True
                 except Exception as e:
-                    response.append(self.icons['NO_URL'] % e)
-            response.append(u"</th>")
+                    result_service['no_url'] = e
+
+            result_service['servers'] = []
             for server in servers:
                 if server not in self.services[cat][service].keys():
                     if "NIC" in cat and "NS" in server:
                         errors |= True
-                    response.append(u"<td> </td>")
+                    result_service['servers'].append(None)
                     continue
 
-                if "NIC" in cat and "Status" in server:
-                    response.append(
-                        u"<td class=\"text-center hide-on-small-only\">")
-                else:
-                    response.append(u"<td class=\"text-center\">")
-
                 if "NIC" in cat and "NS" in server:
+                    temp_result = []
                     for ip, stat in sorted(
                             self.services[cat][service][server]):
-                        response.append(
-                            u"%s %s</br>" % (
-                                ip,
-                                self.icons['DELEGATE'] if stat
-                                else self.icons['NO_URL']
-                            )
-                        )
+                        temp_result.append({'ip': ip, 'stat': stat})
                         if not stat:
                             errors |= True
+                    result_service['servers'].append(temp_result)
+
                 elif "TXT" not in server:
-                    for ip in sorted(self.services[cat][service][server]):
-                        response.append(u"%s</br>" % ip)
+                    result_service['servers'].append(
+                        [{'ip': ip}
+                         for ip in sorted(self.services[cat][service][server])]
+                    )
                 if "NIC" in cat and "TXT" in server:
                     if u"Не делегирован" not in u"".join(
                             self.services[cat][service]["    Status"]):
                         spf, dmarc = self.services[cat][service][server]
-                        response.append("spf ")
-                        if spf < 1:
-                            response.append(self.icons['DELEGATE'])
-                        elif spf > 1:
-                            response.append(self.icons['INSECURE'])
-                            errors |= True
-                        else:
-                            response.append(self.icons['NO_URL'])
+                        result_service['servers'].append(
+                            [{'ip': 'spf ', 'spf': spf},
+                             {'ip': 'dmarc ', 'dmarc': dmarc}]
+                        )
+                        if spf or dmarc:
                             errors |= True
 
-                        response.append("<br>dmarc ")
-                        if dmarc < 1:
-                            response.append(self.icons['DELEGATE'])
-                        else:
-                            response.append(self.icons['NO_URL'])
-                            errors |= True
-
-                response.append(u"</td>")
-                if "NIC" in cat and "Status" in server:
-                    status = u"".join(self.services[cat][service][server])
-                    if u"Не делегирован" in status:
-                        response.append(
-                            u"<td class=\"hide-on-med-and-up\">%s</td>"
-                            % self.icons['NO_URL'])
-                    else:
-                        response.append(
-                            u"<td class=\"hide-on-med-and-up\">%s</td>"
-                            % self.icons['DELEGATE'])
             if cat == "web" or cat == "promo" or cat == "stream":
-                author = " ".join(filter(len, self.authors.get(service, {})))
-                if author == "":
-                    author = self.icons['ANONYMOUS']
-                response.append(u"<td>%s</td>" % author)
-            response.append(u"<td class=\"hide\">%s</td>"
-                            % (1 if errors else 0))
-            response.append(u"</tr>\n")
+                result_service['author'] = " ".join(
+                    filter(len, self.authors.get(service, {}))
+                )
+            result_service['errors'] = errors
 
-        response.append(u"</tbody></table>")
+            result_services.append(result_service)
+
         try:
             template = self.tpl.get_template(cat + ".html")
         except TemplateNotFound:
-            template = Template("{{table}}")
+            template = self.tpl.get_template("_table.html")
 
-        return template.render(table=u"".join(response), columns=columns)
+        return template.render(services=result_services,
+                               columns=columns,
+                               servers=servers,
+                               cat=cat)
 
     def fetch(self):
         # GitLab
@@ -749,21 +633,21 @@ class Distributor(object):
         try:
             servers = self.settings.get("git", "servers").split(",")
             auth = {'PRIVATE-TOKEN': self.settings.get("git", "token")}
-            url = "https://%s/api/v3/projects" % self.settings.get("git",
-                                                                   "host")
+            url = ("https://%s/api/v3/projects" %
+                   self.settings.get("git", "host"))
             for server in servers:
                 try:
                     id_proj = rget(
-                            "%s/%s%%2F%s"
-                            % (url, self.settings.get("git", "group"), server),
-                            headers=auth
+                        "%s/%s%%2F%s" %
+                        (url, self.settings.get("git", "group"), server),
+                        headers=auth
                     ).json()[u'id']
                 except:
                     logging.warning("Repository %s does not exists" % server)
                 else:
                     sha = rget(
-                            "%s/%s/repository/commits" % (url, id_proj),
-                            headers=auth).json()[0][u'id']
+                        "%s/%s/repository/commits" % (url, id_proj),
+                        headers=auth).json()[0][u'id']
                     for filepath in ['usr/local/etc/nginx/nginx.conf',
                                      'usr/local/etc/haproxy/haproxy.cfg',
                                      'etc/nginx/nginx.conf',
@@ -772,40 +656,37 @@ class Distributor(object):
                         try:
                             params = {'filepath': filepath}
                             main_file = rget(
-                                    "%s/%s/repository/blobs/%s"
-                                    % (url, id_proj, sha),
-                                    params=params, headers=auth)
+                                "%s/%s/repository/blobs/%s" %
+                                (url, id_proj, sha),
+                                params=params, headers=auth)
                             if main_file.status_code != 200:
                                 continue
                             with open(
-                                    pjoin(
-                                            self.configs,
-                                                    "%s.%s.all"
-                                                    % (
-                                            splitext(basename(filepath))[0],
-                                            server)),
-                                    "w") as config:
+                                pjoin(
+                                    self.configs,
+                                    "%s.%s.all" %
+                                    (splitext(basename(filepath))[0], server)
+                                ), "w"
+                            ) as config:
                                 main_file = main_file.text
 
                                 for incl in findall(
-                                        r"(?:^i|^[ \t]+i)nclude (.+?);$",
-                                        main_file, REM):
+                                    r"(?:^i|^[ \t]+i)nclude (.+?);$",
+                                    main_file, REM
+                                ):
                                     try:
                                         params = {
-                                            'filepath': pjoin(
-                                                    dirname(filepath), incl
-                                            )
+                                            'filepath':
+                                            pjoin(dirname(filepath), incl)
                                         }
                                         include_file = rget(
-                                                "%s/%s/repository/blobs/%s"
-                                                % (url, id_proj, sha),
-                                                params=params,
-                                                headers=auth
-                                        )
+                                            "%s/%s/repository/blobs/%s"
+                                            % (url, id_proj, sha),
+                                            params=params, headers=auth)
                                         if include_file.status_code == 200:
                                             main_file = main_file.replace(
-                                                    "include " + incl + ";",
-                                                    include_file.text)
+                                                "include " + incl + ";",
+                                                include_file.text)
                                     except:
                                         pass
                                 config.write(main_file)

@@ -9,12 +9,18 @@ __author__ = 'm_messiah'
 class TestDistributor(TestCase):
     def setUp(self):
         self.pwd = dirname(realpath(__file__))
-        self.D = Distributor(self.pwd, join(self.pwd, "config_t.ini"))
+        self.D = Distributor(join(self.pwd, "configs"),
+                             join(self.pwd, "config_t.ini"))
 
     def test_config(self):
         with self.assertRaises(SystemExit):
-            Distributor(self.pwd, join(self.pwd, "config_t_bad.ini"))
-
+            try:
+                with self.assertLogs():
+                    Distributor(join(self.pwd, "configs"),
+                                join(self.pwd, "config_t_bad.ini"))
+            except AttributeError:
+                Distributor(join(self.pwd, "configs"),
+                            join(self.pwd, "config_t_bad.ini"))
 
     def test_parse_nginx(self):
         self.D.parse_nginx(join(self.pwd, "configs", "nginx.test_server.all"))
@@ -79,3 +85,51 @@ class TestDistributor(TestCase):
 
     def test_get_cats(self):
         self.assertListEqual(sorted(self.D.services.keys()), self.D.get_cats())
+
+    def test_write_nginx(self):
+        self.D.parse_nginx(join(self.pwd, "configs", "nginx.test_server.all"))
+        self.D.parse_nginx(join(self.pwd, "configs", "nginx.front1.all"))
+        web_table = self.D.write("web")
+
+        self.assertIn("ch-test_server", web_table)
+        self.assertIn("ch-author", web_table)
+        self.assertIn("th:nth-child", web_table)
+        self.assertIn("<table", web_table)
+        self.assertIn("</table>", web_table)
+        self.assertIn("<th>front</th>", web_table)
+        self.assertIn('class="zone', web_table)
+        self.assertIn('id="web-table"', web_table)
+        self.assertIn('https://example.net', web_table)
+
+        promo_table = self.D.write("promo")
+        self.assertIn("<table", promo_table)
+        self.assertIn("</table>", promo_table)
+        self.assertNotIn('class="zone', promo_table)
+        self.assertIn('id="promo-table"', promo_table)
+        self.assertIn('example.com', promo_table)
+
+        stream_table = self.D.write("stream")
+        self.assertIn("<table", stream_table)
+        self.assertIn("</table>", stream_table)
+        self.assertIn('class="zone', stream_table)
+        self.assertIn('id="stream-table"', stream_table)
+        self.assertIn('rdp.example.com', stream_table)
+        self.assertIn('git.example.net', stream_table)
+
+    def test_write_haproxy(self):
+        self.D.parse_haproxy(
+            join(self.pwd, "configs", "haproxy.test_server.all")
+        )
+        http_table = self.D.write("http")
+        self.assertIn("<table", http_table)
+        self.assertIn("</table>", http_table)
+        self.assertIn('class="zone', http_table)
+        self.assertIn('id="http-table"', http_table)
+        self.assertIn('https.example.org', http_table)
+
+        ssh_table = self.D.write("ssh")
+        self.assertIn("<table", ssh_table)
+        self.assertIn("</table>", ssh_table)
+        self.assertIn('class="zone', ssh_table)
+        self.assertIn('id="ssh-table"', ssh_table)
+        self.assertIn('ssh.example.org', ssh_table)

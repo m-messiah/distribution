@@ -1,0 +1,99 @@
+{% block layout %}{% endblock %}
+{% block filters %}{% endblock %}
+<table class="hoverable" id="{{ cat }}-table">
+    <thead>
+        <tr>
+            <th>Services</th>
+            {% for server in servers %}
+            <th>{{ server }}</th>
+            {% endfor %}
+            {% if cat in ["web", "promo", "stream"] %}
+            <th>Author</th>
+            {% endif %}
+        </tr>
+    </thead>
+    <tbody>
+    {% for service in services %}
+        <tr class="{% if service.zone is none %}red lighten-3{% else %}zone{{ service.zone }}{% endif %}">
+            <th>
+                {% if service.no_url %}
+                    <i title="{{ service.no_url }}" class="tiny material-icons red-text">clear</i>
+                {% endif %}
+                {% if service.insecure %}
+                    <i title="bad ssl" class="tiny material-icons red-text text-lighten-1">security</i>
+                {% endif %}
+                {% if service.dotted %}
+                    <i title=".domain" class="tiny material-icons orange-text">filter_center_focus</i>
+                {% endif %}
+                {{ service.service }}
+                {% if service.no_fav or service.bad_fav %}
+                    <i class="tiny material-icons {% if service.bad_fav %}orange-text" title="favicon.ico not .ico"{% else %}" title="no favicon.ico"{% endif %}>favorite_border</i>
+                {% endif %}
+                {% if service.no_robots or service.bad_robots %}
+                    <i class="tiny material-icons {% if service.bad_robots %}orange-text" title="bad robots.txt"{% else %}" title="no robots.txt"{% endif %}>android</i>
+                {% endif %}
+                {% if service.no_sitemap or service.bad_sitemap %}
+                    <i class="tiny material-icons {% if service.bad_sitemap %}orange-text" title="bad sitemap.xml"{% else %}" title="no sitemap.xml"{% endif %}>dashboard</i>
+                {% endif %}
+                {% if service.redirect %}
+                    <i title="redirect detected" class="tiny material-icons">arrow_forward</i>
+                {% endif %}
+                {% if service.x_powered_by %}
+                    <i title="X-Powered-By header detected" class="tiny material-icons">announcement</i>
+                {% endif %}
+                {% if service.double_header_same %}
+                    <i title="duplicate header with same info" class="tiny material-icons orange-text">filter_2</i>
+                {% endif %}
+                {% if service.no_h1 %}&lt;h1&gt;{% endif %}
+                {% if service.no_title %}&lt;title&gt;{% endif %}
+                {% if service.no_description %}&lt;descr&gt;{% endif %}
+            </th>
+            {% for server in service.servers %}
+                <td class="text-center">
+                    {% if server %}
+                        {% for line in server %}
+                            {{ line.ip }}
+                            {% if line.stat is defined %}
+                                {% if line.stat %}
+                                    <i title="SOA" class="tiny material-icons green-text">done</i>
+                                {% else %}
+                                    <i title="Not SOA" class="tiny material-icons red-text">clear</i>
+                                {% endif %}
+                            {% endif %}
+                            {% if line.spf is defined %}
+                                {% if line.spf < 1 %}
+                                    <i title="spf" class="tiny material-icons green-text">done</i>
+                                {% elif line.spf > 1 %}
+                                    <i title="spf +all" class="tiny material-icons red-text text-lighten-1">security</i>
+                                {% else %}
+                                    <i title="no spf" class="tiny material-icons red-text">clear</i>
+                                {% endif %}
+                            {% endif %}
+                            {% if line.dmarc is defined %}
+                                {% if line.dmarc %}
+                                    <i title="no dmarc" class="tiny material-icons red-text">clear</i>
+                                {% else %}
+                                    <i title="dmarc" class="tiny material-icons green-text">done</i>
+                                {% endif %}
+                            {% endif %}
+                            {% if not loop.last %}<br>{% endif %}
+                            {% endfor %}
+                    {% endif %}
+                </td>
+            {% endfor %}
+            {% if service.author is defined %}
+                <td>
+                    {% if service.author %}
+                        {{ service.author }}
+                    {% else %}
+                        <i title="no author" class="tiny material-icons red-text text-lighten-1">person_add</i>
+                    {% endif %}
+                </td>
+            {% endif %}
+            <td class="hide">{{ service.errors | int }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+{% block scripts %}{% endblock %}
