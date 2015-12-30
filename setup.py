@@ -4,14 +4,14 @@ from sys import version_info
 
 setup(
     name='distributor',
-    version='2.2',
+    version='2.3',
     packages=['distributor'],
     include_package_data=True,
     url='https://github.com/m-messiah/distributor',
     license='MIT',
     author='m_messiah',
     author_email='m.muzafarov@gmail.com',
-    description='Nginx, Haproxy configs and DNS anayzer.',
+    description='Nginx, Haproxy configs and DNS analyzer.',
     long_description=open(join(dirname(__file__), 'README.rst')).read(),
     scripts=["distributor-gen"],
     install_requires=[
