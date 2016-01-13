@@ -1,12 +1,21 @@
 {% extends "_table.html" %}
 {% block filters %}
 <div class="row checkboxes">
-    <div class="col s11 offset-s1">
+    <div class="col s5 offset-s1">
         <div class="switch">
             <label>
             <input id="nic-errors" type="checkbox" checked="true" >
             <span class="lever"></span>
             Show good lines
+            </label>
+        </div>
+    </div>
+    <div class="col s5">
+        <div class="switch">
+            <label>
+            <input id="nic-only-not" type="checkbox">
+            <span class="lever"></span>
+                Show only undelegate
             </label>
         </div>
     </div>
@@ -19,6 +28,12 @@
             $(".hide").filter(':contains("0")').parent().show()
         }
         else {$(".hide").filter(':contains("0")').parent().hide()}
+    });
+    $('#nic-only-not').on("click", function() {
+        if ($(this).prop("checked")) {
+            $(".text-center").filter(':contains("Делегирован")').parent().hide()
+        }
+        else {$(".text-center").filter(':contains("Делегирован")').parent().show()}
     });
 </script>
 {% endblock %}
