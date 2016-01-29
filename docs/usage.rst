@@ -27,4 +27,4 @@
 
     # /etc/crontab
     # Daily distributor-gen
-    0 5 * * * nginx /usr/bin/distributor-gen -c /etc/distributor.conf -o /var/www/distributor -l /var/www/distributor/log
+    0 5 * * * nginx /usr/bin/distributor-gen -c /etc/distributor.ini -o /var/www/distributor -l /var/www/distributor/log
