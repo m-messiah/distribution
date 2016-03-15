@@ -15,5 +15,5 @@ deploy:
   provider: pypi
   user: m_messiah
   password:
-    secure: nI3DSPGg1NvuIFUQCkySYhNWXQClBPNNLBFqWxooskopjmxS1Bu0Ol6dybEmpeyHG8JQmWMOeyOj24Z1PFUL/Br5E1llxpXmlT4U3KqLD5aJ8UxKbgsQzA/GOIy21n639uzGHdTT5J6xsv+Ud3w1WtxzOMnyOI67n4aqeEePQmU=
+    secure: "V6QktKZpSNZdqVwLPgHUAiBmR+c/eKm3PZFSQK8pT2i++hFGcMSy1njuTuzPzGDfuoQiDvNYCNXattJaK6GwkKOPk4vqPYwaYtSnlcmFiSiRZoz4tX0DdzJP+K3Ot/zmQGCNs2TpIS7YfRjg8z5XYIokH6GgYs5/XudO1eT2KqA="
   distributions: sdist bdist bdist_wheel
