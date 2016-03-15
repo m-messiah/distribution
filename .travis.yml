@@ -17,4 +17,4 @@ deploy:
   docs_dir: docs
   user: m_messiah
   password:
-    secure: "jIctvuh2/PimWYnSO/PbB3C3CVL/1lxIE/CqabitKuWdaTWcuQmQNGnkfaulTGBSzn6ZHuoYfORqh5jWEUqHpal18iwD5u4xAKPLELTYlGpVqmbn1EPntlLRMyqF9cPCoiE0SLo/4J01V8XkFDGiVY2xwydARoOeo+j+L4AalTE="
+    secure: jIctvuh2/PimWYnSO/PbB3C3CVL/1lxIE/CqabitKuWdaTWcuQmQNGnkfaulTGBSzn6ZHuoYfORqh5jWEUqHpal18iwD5u4xAKPLELTYlGpVqmbn1EPntlLRMyqF9cPCoiE0SLo/4J01V8XkFDGiVY2xwydARoOeo+j+L4AalTE=
