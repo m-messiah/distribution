@@ -216,6 +216,11 @@ class Distributor(object):
         return sorted(self.services.keys())
 
     def api(self):
+        authors = defaultdict(list)
+        for url, authors_list in self.authors.items():
+            for a in authors_list:
+                authors[a].append(url)
+        self._api['web']['authors'] = authors
         return json.dumps(self._api)
 
     def generate(self):
