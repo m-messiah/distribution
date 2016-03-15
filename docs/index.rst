@@ -41,6 +41,7 @@
     Конфигурация <configuration>
     Использование <usage>
     Проверки <checks>
+    API <api>
 
 ..  toctree::
     :maxdepth: 1
