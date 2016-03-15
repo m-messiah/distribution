@@ -1,13 +1,19 @@
 branches:
   only:
-    - master
+  - master
 language: python
 python:
-  - "2.7"
-  - "3.3"
-  - "3.4"
-  - "3.5"
+- '2.7'
+- '3.3'
+- '3.4'
+- '3.5'
 cache: pip
 sudo: false
-install: "pip install -q -e ."
-script: "python setup.py test"
+install: pip install -q -e .
+script: python setup.py test
+deploy:
+  provider: pypi
+  user: m_messiah
+  password:
+    secure: S6uKuU7cI8yxUhXmoWStaw8sMY4MIqrgZqhr28tybM9++kwj0A0D+dtTcBI1KxRTQ77RUbZvOlxbpBmQ1d+JYW0gbSKvzWcV2cJbcOtC5VUBYelVIzp8M+C+N2ivp5naO53Tyn3238gXqvTp9lTzqDNLoFmBfPYneBz+A6hojFI=
+  distributions: "sdist bdist bdist_wheel"
