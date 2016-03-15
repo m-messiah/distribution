@@ -16,4 +16,4 @@ deploy:
   distributions: "sdist bdist bdist_wheel"
   user: m_messiah
   password:
-    secure: MBzTUjw3FgzfV+WCudPjFdByamwWFxHRBLelZmXfrb2B/ne5l3D2hVdGTJTjUiletNKsB+XBRKQh3ehZ0wqnTN5mmQSwUu6rcv/xh939CRE5xZh2fJJQNFxzh5x/zb8LW2/yWZhbs2StimaQutKfnXg564gQjjtYsW5v04mBrDs=
+    secure: PLVhUrYRTkr7D0v/GqBnq9aJY53gyVkrpDhvdJoq/rCrG/l3MUgRy24QT1B0DcwgZ9pn7udZB3sgoDHD+wnEt6NwIKiI+VQ3eKGgbrMlCh+QsRk7JTa6Mg1XnY/M0+KlK4M3pE39wTir3YoW1HmNrSti6QxOx+bK26yTDsexw8A=
