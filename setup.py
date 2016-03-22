@@ -1,10 +1,12 @@
 from setuptools import setup
 from os.path import join, dirname
-from sys import version_info
+from sys import version_info, executable
+
+executable = "/usr/bin/env python%s" % (3 if version_info[0] == 3 else "")
 
 setup(
     name='distributor',
-    version='2.4.1',
+    version='2.4.2',
     packages=['distributor'],
     include_package_data=True,
     url='https://github.com/m-messiah/distributor',
