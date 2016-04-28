@@ -16,8 +16,8 @@ Distributor
 .. image:: https://img.shields.io/travis/m-messiah/distributor.svg?style=flat-square
     :target: https://travis-ci.org/m-messiah/distributor
 
-.. image:: https://readthedocs.org/projects/distributor/badge/?version=latest&style=flat-square
-    :target: http://distributor.readthedocs.org/ru/latest/?badge=latest
+.. image:: https://readthedocs.io/projects/distributor/badge/?version=latest&style=flat-square
+    :target: http://distributor.readthedocs.io/ru/latest/?badge=latest
     :alt: Documentation Status
     
     
