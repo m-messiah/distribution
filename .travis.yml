@@ -1,12 +1,8 @@
-branches:
-  only:
-  - master
 language: python
 python:
 - '2.7'
-- '3.3'
-- '3.4'
 - '3.5'
+- '3.7'
 cache: pip
 sudo: false
 install: pip install -q -e .
@@ -18,3 +14,6 @@ deploy:
   user: m_messiah
   password:
     secure: "OQMaQmpake3q4UEJ7DKOcsIEd3POhEyOiOdNwnmiJzNpi7pdg6tbqV+9iuVmUP0lAkZDu7xukFZTslqD3YAeeVDUSmtqW49e1vt/sub0MQ93ThEwcb5msZmRVIF0iOb2uB5ArwbZTvwqdoG0T+q1Nhgc9tWODNbTkyL3IyNO3s0="
+  on:
+    repo: m-messiah/distributor
+    tags: true
