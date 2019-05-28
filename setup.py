@@ -19,7 +19,7 @@ setup(
     install_requires=[
         "jinja2",
         "pyparsing",
-        "dnspython%s" % (3 if version_info[0] == 3 else ""),
+        "dnspython",
         "requests"
     ],
     test_suite="tests",
