@@ -9,3 +9,4 @@
 /distributor.egg-info
 /MANIFEST
 __pycache__/
+/.eggs/

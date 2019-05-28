@@ -145,10 +145,10 @@ def check_txt(domain, status):
         mess = dns.resolver.query(
             dns_name.from_text(domain),
             dns.rdatatype.TXT)
-    except:
+    except Exception:
         spf = 1
     else:
-        txts = [txt for rdata in mess for txt in rdata.strings]
+        txts = [rdata.to_text() for rdata in mess]
         spfs = filter(lambda i: "v=spf1" in i, txts)
         if not spfs:
             spf = 1
